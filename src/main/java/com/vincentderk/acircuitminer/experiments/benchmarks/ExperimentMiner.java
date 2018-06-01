@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Mining experiment as shown in the results of the paper and scientific article.
- * @author Vincent
+ * {@link Miner Mining experiment} as shown in the results of the paper and scientific article.
+ * 
+ * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentMiner {
 
@@ -21,7 +23,7 @@ public class ExperimentMiner {
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost2 version - ExperimentMiner");
+        System.out.println("Running ExperimentMiner");
         boolean verbose = true;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
@@ -38,7 +40,7 @@ public class ExperimentMiner {
 
         // Find patterns
         stopwatch.reset().start();        
-        Miner.execute(g, k, verbose, maxInputs, xBest); //executeRaw() does not remove the overlap, execute() does
+        Miner.executeRaw(g, k, verbose, maxInputs, xBest); //executeRaw() does not remove the overlap, execute() does
         System.out.printf("Executed total algorithm (excl. graph loading) in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         

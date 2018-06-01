@@ -27,19 +27,33 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Experiment to find the best pattern taking into account the patterns
+ * that are emulatable by using 0 or 1 as input.
+ * 
+ * <p>
+ * <u>Algorithm:</u>
+ * <ul>
+ * <li> Find patterns and their occurrences in an AC </li>
+ * <li> Evaluate each pattern on their savings </li>
+ * ({@link #useNeutralElements(java.util.Map.Entry, Object2ObjectOpenCustomHashMap)})
+ * </li>
+ * by determining the usage of a pattern. </li>
+ * <li> Sort on most savings </li>
+ * <li> Print information on each pattern usage </li>
+ * </ul>
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentNeutralFinder {
 
     /**
-     * Run alg, take best pattern, replace pattern in-place, write replaced AC
-     * as ..New.net.ac and write pattern as ...Pattern.net.ac
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost version - ExperimentNeutralFinder");
+        System.out.println("Running ExperimentNeutralFinder");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
@@ -69,7 +83,7 @@ public class ExperimentNeutralFinder {
                 .toArray(Map.Entry[]::new);
         System.out.printf("Finished replace-plan for each pattern in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
-        // -- Debug -- //TODO: remove?
+        // -- DEBUG, found info -- 
         double opNodeCount = Utils.operationNodeCount(g);
         System.out.println("");
         System.out.println("Amount of arithmetic nodes in AC: " + opNodeCount);
@@ -111,7 +125,7 @@ public class ExperimentNeutralFinder {
         }
         System.out.println("");
 
-        // -- Replacement --
+        // -- Replacement, use best pattern --
         /*
         Entry<long[], UseBlock> best = patternUseBlocks[0];
         UseBlock useBlock = best.getValue();
@@ -144,9 +158,25 @@ public class ExperimentNeutralFinder {
 
         // Write patterns
         OperationUtils.writeUseBlock(g, useBlock, outPath, path, patternPOutputPath, emulatedOutputPaths, symbols, ignoreList);
-*/
+         */
     }
 
+    /**
+     * Determine a possible usage for the pattern P contained in {@code patternEntry}.
+     * <p>
+     * First, the occurrences of the pattern are replaced ({@code patternEntry.getValue()}).
+     * Then, {@link NeutralFinder} is used to obtain all patterns that are emulatable by P.
+     * The occurrences of these emulatable patterns are also replaced, keeping in mind the overlap.
+     * More specifically, the next emulatable pattern is chosen on a biggest-first basis.
+     * The occurrences of the chosen pattern are picked on a first-come, first-served principal.
+     * All the usage information is returned as part of a {@link UseBlock}.
+     * 
+     * @param patternEntry An entry of a pattern and its occurrences (non-overlapping as these are replaced).
+     * @param patternsAll All found patterns and occurrences (overlap allowed).
+     * @return An Entry consisting of the pattern contained in
+     * {@code patternEntry} and a {@link UseBlock} that contains the usage
+     * information determined for the pattern.
+     */
     private static Entry<long[], UseBlock> useNeutralElements(Entry<long[], ObjectArrayList<int[]>> patternEntry,
             final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll) {
 
@@ -167,6 +197,7 @@ public class ExperimentNeutralFinder {
         NeutralFinder finder = new NeutralFinder();
         Object2ObjectOpenCustomHashMap<long[], EmulatableBlock> emulatablePatterns = finder.getEmulatablePatternsMap(pattern);
 
+        //Only keep emulatable patterns of which replacement saves costs.
         for (Map.Entry<long[], EmulatableBlock> pEntry : emulatablePatterns.entrySet()) {
             long[] p = pEntry.getKey();
             ObjectArrayList<int[]> pOcc = patternsAll.get(p);
@@ -182,7 +213,6 @@ public class ExperimentNeutralFinder {
 
             //Sort & pick
             Optional<Entry<long[], ObjectArrayList<int[]>>> optBest = Stream.of(patterns)
-                    //TODO: one that sorts based on savings (savings takes into account current pattern)
                     //.sorted(new EntryDynCostCom(emulatablePatterns, false)) //false = high to low profit size
                     //.sorted(new EntryOccCountCom(true)) //true = low to high #occurrences
                     .sorted(new EntryPatternSizeCom(false)) //false = high to low pattern size
@@ -192,7 +222,8 @@ public class ExperimentNeutralFinder {
                 Entry<long[], ObjectArrayList<int[]>> best = optBest.get();
                 patternsOfInterest.remove(best.getKey());
 
-                if (!best.getValue().isEmpty()) {
+                if (!best.getValue().isEmpty()) { 
+                    //Add as replaced
                     assignedPatterns.add(best.getKey());
                     assignedOccurrences.add(best.getValue());
                     Utils.addInvolvedOpNodes(best.getValue(), replacedNodes);

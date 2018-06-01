@@ -7,7 +7,6 @@ import com.vincentderk.acircuitminer.miner.Miner;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitCom;
 import static com.vincentderk.acircuitminer.miner.util.Utils.patternProfit;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import com.vincentderk.acircuitminer.miner.util.OperationUtils;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -15,7 +14,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -23,37 +21,54 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Performs the enumeration algorithm to find the best pattern (not accounting
+ * for emulation). It replaces the occurrences of that pattern and repeats to
+ * find the next best pattern until no occurrences are left that do not overlap.
+ * <>
+ * <b> The difference with {@link ExperimentReplaceMulti} is that this experiment
+ * re-performs an internal overlap filter before choosing patterns. So the other
+ * Multi continues working on the remaining occurrences, that were first
+ * filtered out for internal overlap and then for overlapping with replaced
+ * patterns. While this version, before choosing each pattern, it re-runs the
+ * overlap by first filtering on overlap with already picked patterns AND THEN
+ * check for overlap internally with the remaining occurrences.</b>
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentReplaceMultiReNO {
 
     /**
-     * 1. Run alg, 2. take best pattern, 3. print pattern, 4. replace pattern
-     * in-place,
-     * <>5. repeat (- below) till no more patterns left with non overlapping
-     * occurrences.
-     * <>- take best pattern (filtering out overlap with previous pattern
-     * occurrences)
-     * <>- print pattern as ...PatternN &lt i &gt .net.ac
-     * <>- replace pattern in-place,
-     * <>6. write replaced AC as ...New.net.ac
-     *
-     * <>
-     * <
-     * b> The difference with ExperimentReplaceMulti is that this experiment
-     * re-performs an internal overlap filter before choosing patterns. So the
-     * other Multi continues working on the remaining occurrences, that were
-     * first filtered out for internal overlap and then for overlapping with
-     * replaced patterns. While this version, before choosing each pattern, it
-     * re-runs the overlap by first filtering on overlap with already picked
-     * patterns AND THEN check for overlap internally with the remaining
-     * occurrences.
+     * <ol>
+     * <li> Run enumeration algorithm to find patterns and their occurrences
+     * </li>
+     * <li> Print best pattern</li>
+     * <li> Replace occurrences of best pattern in-place </li>
+     * <li> Repeat till no more patterns left with non overlapping occurrences
+     * or the maximum amount of patterns is reached.
+     * <ul>
+     * <li> Take best pattern (filtering out overlap with previous pattern
+     * occurrences) </li>
+     * <li> Save pattern as ...PatternN{@code <i>}.net.ac </li>
+     * <li> Replace pattern occurrences in-place </li>
+     * </ul>
+     * </li>
+     * <li> Write replaced AC as ...New.net.ac </li>
+     * </ol>
+     * <b> The difference with {@link ExperimentReplaceMulti} is that this
+     * experiment re-performs an internal overlap filter before choosing
+     * patterns. So the other Multi continues working on the remaining
+     * occurrences, that were first filtered out for internal overlap and then
+     * for overlapping with replaced patterns. While this version, before
+     * choosing each pattern, it re-runs the overlap by first filtering on
+     * overlap with already picked patterns AND THEN check for overlap
+     * internally with the remaining occurrences.</b>
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost version - experimentReplaceMultiReNO");
+        System.out.println("Running ExperimentReplaceMultiReNO");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
@@ -97,8 +112,8 @@ public class ExperimentReplaceMultiReNO {
         long occLeft = Long.MAX_VALUE;
 
         System.out.println("");
-        //while (nextOpId <= Graph.HIGHEST_OP + 3) {  //3 = #patterns vervangen
 
+        //while (nextOpId <= Graph.HIGHEST_OP + 3) {  //3 = #patterns vervangen
         while (occLeft > 0) {
             Entry<long[], ObjectArrayList<int[]>> best = Stream.of(patterns).parallel()
                     .sorted(new EntryProfitCom(false)).findFirst().get();

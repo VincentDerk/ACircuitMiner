@@ -20,29 +20,44 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Performs the enumeration algorithm to find the best pattern (not accounting
+ * for emulation). It replaces the occurrences of that pattern and repeats to
+ * find the next best pattern until no occurrences are left that do not overlap.
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentReplaceMulti {
 
     /**
-     * 1. Run alg, 2. take best pattern, 3. print pattern, 4. replace pattern in-place, 
-     * <>5. repeat (- below) till no more patterns left with non overlapping occurrences.
-     * <>- take best pattern (filtering out overlap with previous pattern occurrences)
-     * <>- print pattern as ...PatternN &lt i &gt .net.ac
-     * <>- replace pattern in-place,
-     * <>6. write replaced AC as ...New.net.ac
+     * <ol>
+     * <li> Run enumeration algorithm to find patterns and their occurrences
+     * </li>
+     * <li> Print best pattern</li>
+     * <li> Replace occurrences of best pattern in-place </li>
+     * <li> Repeat till no more patterns left with non overlapping occurrences
+     * or the maximum amount of patterns is reached.
+     * <ul>
+     * <li> Take best pattern (filtering out overlap with previous pattern
+     * occurrences) </li>
+     * <li> Save pattern as ...PatternN{@code <i>}.net.ac </li>
+     * <li> Replace pattern occurrences in-place </li>
+     * </ul>
+     * </li>
+     * <li> Write replaced AC as ...New.net.ac </li>
+     * </ol>
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost version - experimentReplaceMulti");
+        System.out.println("Running ExperimentReplaceMulti");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
         String ac = "munin";
         String path = basePath + ac + ".net.ac";
-        int[] k = {6,10,14,20};
+        int[] k = {6, 10, 14, 20};
         int maxInputs = 15; // Default: 16 minus 1 for the output.
         int xBest = 10;
 
@@ -60,7 +75,6 @@ public class ExperimentReplaceMulti {
         /*patterns = Stream.of(patterns).parallel()
                 .filter(x -> x.getValue().get(0).length > 2)
                 .toArray(Entry[]::new);*/
-
         // Symbols
         HashMap<Short, String> symbols = new HashMap();
         symbols.put(Graph.PRODUCT, "*");
@@ -74,7 +88,7 @@ public class ExperimentReplaceMulti {
         long occLeft = Long.MAX_VALUE;
 
         System.out.println("");
-        while (nextOpId <= Graph.HIGHEST_OP + 3) {  //3 = #patterns vervangen
+        while (nextOpId <= Graph.HIGHEST_OP + 3) {  //3 = #patterns replaced
         //while (occLeft > 0) {
             Entry<long[], ObjectArrayList<int[]>> best = Stream.of(patterns).parallel()
                     .sorted(new EntryProfitCom(false)).findFirst().get();
@@ -97,7 +111,7 @@ public class ExperimentReplaceMulti {
             OperationUtils.writePattern(best.getKey(), patternPath, symbols);
 
             //Fix next pick
-            //TODO: Technically, we could also restart removing overlap
+            //TODO: We could also restart removing overlap
             //from the big result where overlap is still allowed.
             //This way, we do a simple internal overlap AFTER removing the occurrences
             //that aren't allowed anyway. This prevents a choice of internal occurrence

@@ -14,7 +14,6 @@ import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.NeutralFinde
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.UseBlock;
 import com.vincentderk.acircuitminer.miner.util.verification.EquivalenceChecker;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.AbstractObject2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -30,18 +29,27 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Runs the {@link NeutralFinderExperiment} and replaces the occurrences that
+ * the best pattern can replace. After replacement, the functional
+ * {@link EquivalenceChecker equivalence} is of before and after is checked.
+ * This should provide more guarantees that the current replacement is correct.
+ * However, currently the canonical labeling that is used is not efficient
+ * enough to perform this in a short time span for large graphs (1000+ nodes).
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentEquivalence {
 
     /**
-     * NeutralFinderExperiment + test equivalence of before and after
+     * {@link NeutralFinderExperiment} + test
+     * {@link EquivalenceChecker equivalence} of before and after replacement.
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost version - ExperimentNeutralFinder");
+        System.out.println("Running ExperimentEquivalence");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         String ac = "alarm";
@@ -113,22 +121,37 @@ public class ExperimentEquivalence {
         // -- Replacement --
         Entry<long[], UseBlock> best = patternUseBlocks[0];
         UseBlock useBlock = best.getValue();
-        IntArrayList ignoreList; //Nodes to ignore (this excludes the root node for each replacement)
         short newOp = Graph.HIGHEST_OP + 1;
-        ignoreList = OperationUtils.replace(g, useBlock, newOp);
+        OperationUtils.replace(g, useBlock, newOp);
 
         // -- Equivalence --
-        ignoreList = null;
-
         EquivalenceChecker eq = new EquivalenceChecker();
         Short2ObjectAVLTreeMap pMap = new Short2ObjectAVLTreeMap();
-
         pMap.put(newOp, best.getKey());
         boolean equivalent = eq.isEquivalent(originalGraph, g, pMap);
         System.out.println(equivalent);
-
     }
 
+    /**
+     * Determine a possible usage for the pattern P contained in
+     * {@code patternEntry}.
+     * <p>
+     * First, the occurrences of the pattern are replaced
+     * ({@code patternEntry.getValue()}). Then, {@link NeutralFinder} is used to
+     * obtain all patterns that are emulatable by P. The occurrences of these
+     * emulatable patterns are also replaced, keeping in mind the overlap. More
+     * specifically, the next emulatable pattern is chosen on a biggest-first
+     * basis. The occurrences of the chosen pattern are picked on a first-come,
+     * first-served principal. All the usage information is returned as part of
+     * a {@link UseBlock}.
+     *
+     * @param patternEntry An entry of a pattern and its occurrences
+     * (non-overlapping as these are replaced).
+     * @param patternsAll All found patterns and occurrences (overlap allowed).
+     * @return An Entry consisting of the pattern contained in
+     * {@code patternEntry} and a {@link UseBlock} that contains the usage
+     * information determined for the pattern.
+     */
     private static Entry<long[], UseBlock> useNeutralElements(Entry<long[], ObjectArrayList<int[]>> patternEntry,
             final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll) {
 
@@ -164,7 +187,6 @@ public class ExperimentEquivalence {
 
             //Sort & pick
             Optional<Entry<long[], ObjectArrayList<int[]>>> optBest = Stream.of(patterns)
-                    //TODO: one that sorts based on savings (savings takes into account current pattern)
                     //.sorted(new EntryDynCostCom(emulatablePatterns, false)) //false = high to low profit size
                     //.sorted(new EntryOccCountCom(true)) //true = low to high #occurrences
                     .sorted(new EntryPatternSizeCom(false)) //false = high to low pattern size

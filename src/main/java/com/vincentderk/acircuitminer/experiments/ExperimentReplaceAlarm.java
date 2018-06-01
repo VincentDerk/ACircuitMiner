@@ -22,7 +22,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Finds the best pattern (not accounting for emulation) of size 2..30, replaces
+ * the occurrences and writes both the pattern and the resulting new AC to file.
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentReplaceAlarm {
 
@@ -30,15 +34,15 @@ public class ExperimentReplaceAlarm {
      * Experiment Alarm 2..17,25,30.
      *
      * This experiment runs alarm benchmark with k={17,25,30} and xBest=100. For
-     * each pattern size (2..30), the best pattern is taken and its non-overlap
-     * occurrences are replaced in the original AC. The replaced AC is written
-     * to file as well as the pattern.
+     * each pattern size (2..30), the best pattern is taken (not accounting for
+     * emulation) and its non-overlap occurrences are replaced in the original
+     * AC. The replaced AC is written to file as well as the pattern.
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost version - experimentReplaceAlarm");
+        System.out.println("Running ExperimentReplaceAlarm");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";

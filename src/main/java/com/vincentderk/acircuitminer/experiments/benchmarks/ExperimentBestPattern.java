@@ -27,7 +27,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
+ * Experiment to find the best pattern taking into account the patterns
+ * that are emulatable by using 0 or 1 as input.
+ * 
+ * <p>
+ * <u>Algorithm:</u>
+ * <ul>
+ * <li> Find patterns and their occurrences in an AC </li>
+ * <li> Evaluate each pattern on their savings by determining the usage of a
+ * pattern
+ * ({@link #useNeutralElements(java.util.Map.Entry, Object2ObjectOpenCustomHashMap)}).
+ * </li>
+ * <li> Sort patterns on most savings </li>
+ * <li> Print information on each pattern usage </li>
+ * </ul>
+ *
  * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentBestPattern {
 
@@ -37,7 +53,7 @@ public class ExperimentBestPattern {
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost2 version - ExperimentBestPattern");
+        System.out.println("Running ExperimentBestPattern");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
@@ -67,7 +83,7 @@ public class ExperimentBestPattern {
                 .toArray(Map.Entry[]::new);
         System.out.printf("Finished replace-plan for each pattern in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
-        // -- Debug -- 
+        // -- Debug, pattern usage -- 
         double opNodeCount = Utils.operationNodeCount(g);
         System.out.println("");
         System.out.println("Amount of arithmetic nodes in AC: " + opNodeCount);
@@ -93,7 +109,7 @@ public class ExperimentBestPattern {
             int nodeCount0 = opCountPerOcc0 * occCount0;
             totalNodeCount += nodeCount0;
             double relNodeCount0 = (nodeCount0 / opNodeCount) * 100;
-            removedNodeCount += (opCountPerOcc0-1)*occCount0;
+            removedNodeCount += (opCountPerOcc0 - 1) * occCount0;
             System.out.println("- " + "(" + opCountPerOcc0 + "|" + dec.format(relNodeCount0) + "%) " + occCount0 + " of " + code0);
 
             for (int i = 0; i < usedPatterns.length; i++) {
@@ -103,7 +119,7 @@ public class ExperimentBestPattern {
                 int nodeCount = opCountPerOcc * occCount;
                 totalNodeCount += nodeCount;
                 double relNodeCount = (nodeCount / opNodeCount) * 100;
-                removedNodeCount += (opCountPerOcc-1) * occCount;
+                removedNodeCount += (opCountPerOcc - 1) * occCount;
 
                 System.out.println("- " + "(" + opCountPerOcc + "|" + dec.format(relNodeCount) + "%) " + occCount + " of " + code);
             }
@@ -145,10 +161,29 @@ public class ExperimentBestPattern {
 
         // Write patterns
         OperationUtils.writeUseBlock(g, useBlock, outPath, path, patternPOutputPath, emulatedOutputPaths, symbols, ignoreList);
-*/
-        
+         */
     }
 
+    /**
+     * Determine a possible usage for the pattern P contained in
+     * {@code patternEntry}.
+     * <p>
+     * First, the occurrences of the pattern are replaced
+     * ({@code patternEntry.getValue()}). Then, {@link NeutralFinder} is used to
+     * obtain all patterns that are emulatable by P. The occurrences of these
+     * emulatable patterns are also replaced, keeping in mind the overlap. More
+     * specifically, the next emulatable pattern is chosen on a biggest-first
+     * basis. The occurrences of the chosen pattern are picked on a first-come,
+     * first-served principal. All the usage information is returned as part of
+     * a {@link UseBlock}.
+     *
+     * @param patternEntry An entry of a pattern and its occurrences
+     * (non-overlapping as these are replaced).
+     * @param patternsAll All found patterns and occurrences (overlap allowed).
+     * @return An Entry consisting of the pattern contained in
+     * {@code patternEntry} and a {@link UseBlock} that contains the usage
+     * information determined for the pattern.
+     */
     private static Entry<long[], UseBlock> useNeutralElements(Entry<long[], ObjectArrayList<int[]>> patternEntry,
             final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll) {
 
@@ -184,7 +219,6 @@ public class ExperimentBestPattern {
 
             //Sort & pick
             Optional<Entry<long[], ObjectArrayList<int[]>>> optBest = Stream.of(patterns)
-                    //TODO: one that sorts based on savings (savings takes into account current pattern)
                     //.sorted(new EntryDynCostCom(emulatablePatterns, false)) //false = high to low profit size
                     //.sorted(new EntryOccCountCom(true)) //true = low to high #occurrences
                     .sorted(new EntryPatternSizeCom(false)) //false = high to low pattern size
@@ -195,6 +229,7 @@ public class ExperimentBestPattern {
                 patternsOfInterest.remove(best.getKey());
 
                 if (!best.getValue().isEmpty()) {
+                    //Add as replaced
                     assignedPatterns.add(best.getKey());
                     assignedOccurrences.add(best.getValue());
                     Utils.addInvolvedOpNodes(best.getValue(), replacedNodes);

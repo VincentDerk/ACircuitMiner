@@ -28,18 +28,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
- * @author Vincent
+ * This experiment is equivalent to {@link ExperimentBestPattern} except that
+ * now, the nodes in a component can perform both a sum and multiplication
+ * operation. To achieve this, the
+ * {@link #useNeutralElements(java.util.Map.Entry, Object2ObjectOpenCustomHashMap, long)}
+ * is modified. Normally, the emulatable patterns would be retrieved based on a
+ * given pattern P. This time, all possible combinations of operations of
+ * pattern P are tested. For each of those, all emulatable patterns are
+ * retrieved and stored as a set. This results in all the patterns we can
+ * emulate when every node can perform both + and *. The rest of the algorithm
+ * proceeds as before.
+ *
+ * @author Vincent Derkinderen
+ * @version 1.0
  */
 public class ExperimentBestPatternNL {
 
     /**
-     * BestPatternNoLabel: (exact, repeats the emulation algorithm for all possible label (+,*) combinations)
+     * BestPatternNoLabel: (analogous except that the emulation algorithm is
+     * repeated for all possible label (+,*) combinations)
      *
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
-        System.out.println("Running DAGFSM_NewCost2 version - ExperimentBestPatternNoLabel");
+        System.out.println("Running ExperimentBestPatternNoLabel");
         boolean verbose = false;
         String basePath = "D://Thesis//Nets Benchmark//";
         //String basePath = "D://Thesis//Nets//";
@@ -70,7 +83,7 @@ public class ExperimentBestPatternNL {
                 .toArray(Map.Entry[]::new);
         System.out.printf("Finished replace-plan for each pattern in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
-        // -- Debug -- //TODO: remove?
+        // -- Debug --
         double opNodeCount = Utils.operationNodeCount(g);
         System.out.println("");
         System.out.println("Amount of arithmetic nodes in AC: " + opNodeCount);
@@ -148,6 +161,28 @@ public class ExperimentBestPatternNL {
          */
     }
 
+    /**
+     * Determine a possible usage for the pattern P contained in
+     * {@code patternEntry}.
+     * <p>
+     * First, the occurrences of the pattern are replaced
+     * ({@code patternEntry.getValue()}). Then, {@link NeutralFinder} is used to
+     * obtain all patterns that are emulatable by P. Since the nodes of P can do
+     * both + and *, the emulatable patterns are obtained by calling
+     * {@link NeutralFinder} for each possible combination of + and *. The
+     * occurrences of all these emulatable patterns can also be replaced, keeping in
+     * mind the overlap. More specifically, the next emulatable pattern is
+     * chosen on a biggest-first basis. The occurrences of the chosen pattern
+     * are picked on a first-come, first-served principal. All the usage
+     * information is returned as part of a {@link UseBlock}.
+     *
+     * @param patternEntry An entry of a pattern and its occurrences
+     * (non-overlapping as these are replaced).
+     * @param patternsAll All found patterns and occurrences (overlap allowed).
+     * @return An Entry consisting of the pattern contained in
+     * {@code patternEntry} and a {@link UseBlock} that contains the usage
+     * information determined for the pattern.
+     */
     private static Entry<long[], UseBlock> useNeutralElements(Entry<long[], ObjectArrayList<int[]>> patternEntry,
             final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll, long longOp) {
 
@@ -231,30 +266,29 @@ public class ExperimentBestPatternNL {
         long[] p = Arrays.copyOf(pattern, pattern.length);
         Object2ObjectOpenCustomHashMap<long[], EmulatableBlock> result = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
 
-        
         //init p labels, find indices.
         int[] indices = new int[opAmount];
         int index = 0;
         long sum = Long.MAX_VALUE - Graph.SUM;
-        
-        for(int i = 0; i < p.length; i++) {
-            if(p[i] >= Long.MAX_VALUE - Graph.HIGHEST_OP) {
+
+        for (int i = 0; i < p.length; i++) {
+            if (p[i] >= Long.MAX_VALUE - Graph.HIGHEST_OP) {
                 indices[index++] = i;
                 p[i] = sum;
             }
         }
-        
+
         //for every possible combination of p labels:
         do {
             Object2ObjectOpenCustomHashMap<long[], EmulatableBlock> emulatablePatterns = finder.getEmulatablePatternsMap(p);
             result.putAll(emulatablePatterns);
-            
+
             /*for (Object2ObjectMap.Entry<long[], EmulatableBlock> entry : emulatablePatterns.object2ObjectEntrySet()) {
                 long[] flatEmulatedPattern = entry.getKey();
                 flattenPattern(flatEmulatedPattern, longOp); //TODO: remove flatten
                 result.put(flatEmulatedPattern, entry.getValue());
             }*/
-        } while(nextPattern(p, indices));
+        } while (nextPattern(p, indices));
 
         return result;
     }
@@ -280,7 +314,8 @@ public class ExperimentBestPatternNL {
      * The first pattern should be all +, the next one is then found by changing
      * the last + to a * and every operation after that back to +.
      * <p>
-     * e.g ++++, +++*, ++*+, ++**, +*++, +*+*, +**+, +***, *+++, *++*, *+*+, *+**, **++,...
+     * e.g ++++, +++*, ++*+, ++**, +*++, +*+*, +**+, +***, *+++, *++*, *+*+,
+     * *+**, **++,...
      *
      * @param p The pattern to modify in-place
      * @return Whether there was a next pattern
@@ -288,23 +323,23 @@ public class ExperimentBestPatternNL {
     private static boolean nextPattern(long[] p, int[] indices) {
         long sum = Long.MAX_VALUE - Graph.SUM;
         long product = Long.MAX_VALUE - Graph.PRODUCT;
-        
-        int index = indices.length-1;
-        
-        while(index != -1 && p[indices[index]] != sum) {
+
+        int index = indices.length - 1;
+
+        while (index != -1 && p[indices[index]] != sum) {
             index--;
         }
-        
-        if(index == -1) {
+
+        if (index == -1) {
             return false;
         }
-        
+
         p[indices[index]] = product;
-        
-        for(int i = index+1; i < indices.length; i++) {
+
+        for (int i = index + 1; i < indices.length; i++) {
             p[indices[i]] = sum;
         }
-        
+
         return true;
     }
 
