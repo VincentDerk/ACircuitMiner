@@ -81,6 +81,9 @@ This is repeated for each possible combination of  + and * for the pattern after
 
 3. ExperimentMiner executes the enumeration algorithm
 
+### Used networks
+
+The networks used in testing this code were obtained from [bnlearn](http://www.bnlearn.com/bnrepository/) and compiled into .ac files with [ACE](http://reasoning.cs.ucla.edu/ace/).
 
 ## Dependencies
 Google Guava 16.0.1+
