@@ -1,7 +1,7 @@
 # ACircuitMiner
 An Arithmetic Circuit Miner.
 
-This is meant to serve as a library for applications that mine patterns in arithmetic circuits to help in the design of (the functionality) hardware components.
+This is meant to serve as a library for applications that mine patterns in arithmetic circuits to help in the design of (the functionality of) hardware components.
 
 ## Usage
 
