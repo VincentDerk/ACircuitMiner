@@ -1,7 +1,7 @@
 package com.vincentderk.acircuitminer.miner.canonical;
 
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayDeque;
@@ -61,12 +61,12 @@ import java.util.Arrays;
  * </ul>
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class EdgeCanonical {
 
     /**
-     * Get the minimal canonical code. This creates a {@link State} of the given
+     * Get the minimal canonical code. This creates a {@link StateSingleOutput} of the given
      * Graph and calls {@link #minCanonicalPermutation(Graph, State)}. During
      * conversion, all nodes with the special marker {@link Graph#MARKER} are
      * excluded.
@@ -100,7 +100,7 @@ public class EdgeCanonical {
         unexpandable = unexpandableList.toIntArray();
         unexpandableList = null;
 
-        State state = new State(root, vertices, expandable, unexpandable, interNode);
+        StateSingleOutput state = new StateSingleOutput(root, vertices, expandable, unexpandable, interNode);
         return minCanonicalPermutation(g, state);
     }
 
@@ -117,7 +117,7 @@ public class EdgeCanonical {
      * long. Every set of edges starting from a certain node is followed by the
      * label of that node.
      */
-    public static CodeOccResult minCanonicalPermutation(Graph g, State state) {
+    public static CodeOccResult minCanonicalPermutation(Graph g, StateSingleOutput state) {
         int nbVertex = state.vertices.length;
 
         CanonicalState root = new CanonicalState(state);
@@ -229,7 +229,7 @@ public class EdgeCanonical {
 
     /**
      * Get the minimal canonical code using a Depth first search. This creates a
-     * {@link State} of the given Graph and calls
+     * {@link StateSingleOutput} of the given Graph and calls
      * {@link #minCanonicalPermutationDFS(Graph, State)}. During
      * conversion, all nodes with the special marker {@link Graph#MARKER} are
      * excluded.
@@ -263,7 +263,7 @@ public class EdgeCanonical {
         unexpandable = unexpandableList.toIntArray();
         unexpandableList = null;
 
-        State state = new State(root, vertices, expandable, unexpandable, interNode);
+        StateSingleOutput state = new StateSingleOutput(root, vertices, expandable, unexpandable, interNode);
         return minCanonicalPermutationDFS(g, state);
     }
 
@@ -277,7 +277,7 @@ public class EdgeCanonical {
      * long. Every set of edges starting from a certain node is followed by the
      * label of that node.
      */
-    public static CodeOccResult minCanonicalPermutationDFS(Graph g, State state) {
+    public static CodeOccResult minCanonicalPermutationDFS(Graph g, StateSingleOutput state) {
         /**
          * Since we perform a depth-first approach we only need one
          * CanonicalState (c_state) to keep track of the ids assigned to the

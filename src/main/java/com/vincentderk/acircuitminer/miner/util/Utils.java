@@ -3,7 +3,7 @@ package com.vincentderk.acircuitminer.miner.util;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitStateCom;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitCom;
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
@@ -29,7 +29,7 @@ import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
  * of internal operation nodes,...
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class Utils {
 
@@ -297,9 +297,9 @@ public class Utils {
                 if (c >= Long.MAX_VALUE - Graph.HIGHEST_OP) {
                     long op = Long.MAX_VALUE - c;
 
-                    if (op == Graph.PRODUCT) {
+                    if (op == Graph.PRODUCT || op == Graph.PRODUCT_OUTPUT) {
                         multCount++;
-                    } else if (op == Graph.SUM) {
+                    } else if (op == Graph.SUM || op == Graph.SUM_OUTPUT) {
                         sumCount++;
                     }
                 }
@@ -347,9 +347,9 @@ public class Utils {
                 if (c >= Long.MAX_VALUE - Graph.HIGHEST_OP) {
                     long op = Long.MAX_VALUE - c;
 
-                    if (op == Graph.PRODUCT) {
+                    if (op == Graph.PRODUCT || op == Graph.PRODUCT_OUTPUT) {
                         multCount++;
-                    } else if (op == Graph.SUM) {
+                    } else if (op == Graph.SUM || op == Graph.SUM_OUTPUT) {
                         sumCount++;
                     }
                 }
@@ -461,7 +461,7 @@ public class Utils {
      * @return The estimated profit of a pattern. See
      * {@link #patternProfit(long[], int, int)}
      */
-    public static double patternProfitState(long[] code, ObjectArrayList<State> occurrences) {
+    public static double patternProfitState(long[] code, ObjectArrayList<StateSingleOutput> occurrences) {
         if (!occurrences.isEmpty()) {
             return patternProfit(code, occurrences.size());
         } else {
@@ -479,8 +479,8 @@ public class Utils {
      * @return The xBest best patterns according to
      * {@link EntryStateCom}{@code (false)}.
      */
-    public static Entry<long[], ObjectArrayList<State>>[] filter(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> expandableStates, int xBest) {
-        Entry<long[], ObjectArrayList<State>>[] filtered
+    public static Entry<long[], ObjectArrayList<StateSingleOutput>>[] filter(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates, int xBest) {
+        Entry<long[], ObjectArrayList<StateSingleOutput>>[] filtered
                 = expandableStates.object2ObjectEntrySet().parallelStream()
                         .sorted(new EntryProfitStateCom(false)) //highToLow
                         .limit(xBest)

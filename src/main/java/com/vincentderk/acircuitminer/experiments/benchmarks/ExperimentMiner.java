@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  * {@link Miner Mining experiment} as shown in the results of the paper and scientific article.
  * 
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentMiner {
 
@@ -30,7 +30,7 @@ public class ExperimentMiner {
         String ac = "hailfinder";
         String path = basePath + ac + ".net.ac";
         int[] k = {17};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 10;
 
         // Load graph
@@ -40,7 +40,7 @@ public class ExperimentMiner {
 
         // Find patterns
         stopwatch.reset().start();        
-        Miner.executeRaw(g, k, verbose, maxInputs, xBest); //executeRaw() does not remove the overlap, execute() does
+        Miner.executeRaw(g, k, verbose, maxPorts, xBest); //executeRaw() does not remove the overlap, execute() does
         System.out.printf("Executed total algorithm (excl. graph loading) in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         

@@ -10,7 +10,7 @@ import java.util.Arrays;
  * {@link #finishBuild()} afterwards.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class Graph {
 
@@ -32,21 +32,21 @@ public class Graph {
 
     /**
      * Data structure used in state expansion. expandable_children are all
-     * children ({@link inc}) that are not input nodes (literals).
-     * Combined with {@link unexpandable_children} this is equal to {@link inc}.
+     * children ({@link inc}) that are not input nodes (literals). Combined with
+     * {@link unexpandable_children} this is equal to {@link inc}.
      */
     public int[][] expandable_children;
-    
+
     /**
      * Data structure used in state expansion. unexpandable_children are all
-     * children ({@link inc}) that are input nodes (literals).
-     * Combined with {@link expandable_children} this is equal to {@link inc}.
+     * children ({@link inc}) that are input nodes (literals). Combined with
+     * {@link expandable_children} this is equal to {@link inc}.
      */
     public int[][] unexpandable_children;
 
     //Labels are used in the canonical code.
     //The label in the code should be greater than (node1 << 32 | node2).
-    //nodes depend on k and average inc, it will usually be maximum 10 * k.
+    //nodes depend on k, we could take a maximum of 10 * k.
     /**
      * Holds the labels for AC nodes. * = PRODUCT, + = SUM, input = INPUT.
      */
@@ -55,7 +55,9 @@ public class Graph {
     //The labels are used to compare in a canonical code.
     //The label codes (Long.MAX_VALUE - LABEL) should be greater than any (node1 << 32 | node2)
     //Operations are encoded in the code as Long.MAX_VALUE - LABEL.
-    public final static short HIGHEST_OP = 3;
+    public final static short HIGHEST_OP = 5;
+    public final static short PRODUCT_OUTPUT = 5; // OUTPUT denotes that the operation has an additional external output
+    public final static short SUM_OUTPUT = 4; // OUTPUT denotes that the operation has an additional external output
     public final static short MARKER = 3; //Can be used to mark a node for some special reason.
     public final static short PRODUCT = 2;
     public final static short SUM = 1;
@@ -63,6 +65,7 @@ public class Graph {
 
     /**
      * Create a Graph which will consist of {@code vertexNb} vertices.
+     *
      * @param vertexNb The amount of vertices this must have.
      */
     public Graph(int vertexNb) {

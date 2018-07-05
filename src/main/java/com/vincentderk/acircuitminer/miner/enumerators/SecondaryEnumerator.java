@@ -1,6 +1,6 @@
 package com.vincentderk.acircuitminer.miner.enumerators;
 
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Map.Entry;
@@ -12,7 +12,7 @@ import java.util.Map.Entry;
  * extend certain occurrences.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public interface SecondaryEnumerator extends ExpandableEnumerator {
 
@@ -26,7 +26,7 @@ public interface SecondaryEnumerator extends ExpandableEnumerator {
      * modified.
      * @param k The maximum pattern size, equal to the amount of internal nodes
      * (so excluding input nodes).
-     * @param maxInputs The maximum amount of inputs that an occurrence ({@link State}) may have.
+     * @param maxPorts The maximum amount of ports that an occurrence ({@link State}) may have.
      * @param expandAfterFlag Denotes whether the enumerator should keep track
      * of the expandableStates. If this is the last enumeration of the process,
      * set to false. Otherwise use true.
@@ -34,6 +34,6 @@ public interface SecondaryEnumerator extends ExpandableEnumerator {
      * the patternsMap.
      */
     public void expandSelectedPatterns(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap,
-            Entry<long[], ObjectArrayList<State>>[] expandableStates, int k,
-            int maxInputs, boolean expandAfterFlag, int prevK);
+            Entry<long[], ObjectArrayList<StateSingleOutput>>[] expandableStates, int k,
+            int maxPorts, boolean expandAfterFlag, int prevK);
 }

@@ -1,26 +1,27 @@
 package com.vincentderk.acircuitminer.miner.canonical;
 
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.StateSingleOutput;
+import com.vincentderk.acircuitminer.miner.StateMultiOutput;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
 /**
- * Class used by {@link EdgeCanonical} in performing the canonical labeling of a
- * rooted DAG. It stores information regarding the assignment of ids (0,1,2,..) to the
- * nodes in a graph ({@link StateSingleOutput} object).
+ * Class used by {@link EdgeCanonicalMultiOutput} in performing the canonical
+ * labeling of a multi-rooted DAG. It stores information regarding the
+ * assignment of ids (0,1,2,..) to the nodes in a graph
+ * ({@link StateMultiOutput} object).
  *
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class CanonicalState implements Comparable<CanonicalState> {
+public class CanonicalStateMultiOutput implements Comparable<CanonicalStateMultiOutput> {
 
     /**
      * The state of which this is a (intermediate) canonical state.
      */
-    StateSingleOutput state;
+    StateMultiOutput state;
 
     /**
      * revAllocation = (x,y) = node x has been allocated y (codeId)
@@ -53,18 +54,21 @@ public class CanonicalState implements Comparable<CanonicalState> {
      * and sets that root as the next extension of this CanonicalState.
      *
      * @param state state of which this is an (intermediate) canonical state.
+     * @param outputNodes The nodes that have an external output. These nodes
+     * will be assigned in the order that they are given. Will be cloned.
      */
-    public CanonicalState(StateSingleOutput state) {
+    public CanonicalStateMultiOutput(StateMultiOutput state, int[] outputNodes) {
         this.state = state;
         this.revAllocation = new Int2IntOpenHashMap();
-        this.revAllocation.put(state.root, 0);
-        this.extensions = new int[1];
-        this.extensions[0] = state.root;
-        this.n = 1;
+        for (int i = 0; i < outputNodes.length; i++) {
+            this.revAllocation.put(outputNodes[i], i);
+        }
+        this.extensions = outputNodes.clone();
+        this.n = extensions.length;
         this.inputCount = 0;
     }
 
-    private CanonicalState(StateSingleOutput state, Int2IntOpenHashMap revAllocation, int[] extensions, long[] code, int n, int inputCount) {
+    private CanonicalStateMultiOutput(StateMultiOutput state, Int2IntOpenHashMap revAllocation, int[] extensions, long[] code, int n, int inputCount) {
         this.state = state;
         this.revAllocation = revAllocation;
         this.extensions = extensions;
@@ -74,12 +78,12 @@ public class CanonicalState implements Comparable<CanonicalState> {
     }
 
     @Override
-    public CanonicalState clone() {
+    public CanonicalStateMultiOutput clone() {
         Int2IntOpenHashMap n_allocation = this.revAllocation.clone();
         int[] n_extensions = this.extensions.clone();
         long[] n_code = this.code.clone();
 
-        return new CanonicalState(this.state, n_allocation, n_extensions, n_code, this.n, this.inputCount);
+        return new CanonicalStateMultiOutput(this.state, n_allocation, n_extensions, n_code, this.n, this.inputCount);
     }
 
     /**
@@ -95,11 +99,12 @@ public class CanonicalState implements Comparable<CanonicalState> {
      * @param g The graph wherein we expand this structure.
      * @return The list of expanded canonical states.
      */
-    public Collection<CanonicalState> expand(Graph g) {
-        ArrayList<CanonicalState> results = new ArrayList<>();
+    public Collection<CanonicalStateMultiOutput> expand(Graph g) {
+        ArrayList<CanonicalStateMultiOutput> results = new ArrayList<>();
         int node = extensions[0];
         int currentNode = revAllocation.get(node);
         long expandNode = (long) currentNode << 32;
+
         long[] extra = new long[g.inc[node].length + 1]; //extra code
         final int NULLVAL = revAllocation.defaultReturnValue();
 
@@ -140,7 +145,21 @@ public class CanonicalState implements Comparable<CanonicalState> {
         }
 
         //Label in the code
-        extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        if (Arrays.binarySearch(state.outputNodes, node) >= 0) {
+            //output node
+            switch (g.label[node]) {
+                case Graph.SUM:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.SUM_OUTPUT;
+                    break;
+                case Graph.PRODUCT:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.PRODUCT_OUTPUT;
+                    break;
+                default:
+                    extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+            }
+        } else {
+            extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        }
 
         //Start of the new extension list. Except for the Not yet assigned but 
         //expandable (non input)  children (UANI), every edge is filled in.
@@ -184,10 +203,10 @@ public class CanonicalState implements Comparable<CanonicalState> {
                             n_revAllocation.put(SHARED[i], assignShared[i]);
                         }
 
-                        results.add(new CanonicalState(this.state, n_revAllocation, n_extensions, extra, new_n, n_inputCount));
+                        results.add(new CanonicalStateMultiOutput(this.state, n_revAllocation, n_extensions, extra, new_n, n_inputCount));
                     } while ((assignShared = getNextPermutation(assignShared)) != null);
                 } else {
-                    results.add(new CanonicalState(this.state, n_inter_revAllocation, n_extensions, extra, new_n, n_inputCount));
+                    results.add(new CanonicalStateMultiOutput(this.state, n_inter_revAllocation, n_extensions, extra, new_n, n_inputCount));
                 }
             } while ((assign = getNextPermutation(assign)) != null);
         } else {
@@ -209,10 +228,10 @@ public class CanonicalState implements Comparable<CanonicalState> {
                         n_revAllocation.put(SHARED[i], assignShared[i]);
                     }
 
-                    results.add(new CanonicalState(this.state, n_revAllocation, n_extensions_temp, extra, new_n, n_inputCount));
+                    results.add(new CanonicalStateMultiOutput(this.state, n_revAllocation, n_extensions_temp, extra, new_n, n_inputCount));
                 } while ((assignShared = getNextPermutation(assignShared)) != null);
             } else {
-                results.add(new CanonicalState(this.state, revAllocation, n_extensions_temp, extra, new_n, n_inputCount));
+                results.add(new CanonicalStateMultiOutput(this.state, revAllocation, n_extensions_temp, extra, new_n, n_inputCount));
             }
         }
 
@@ -532,7 +551,7 @@ public class CanonicalState implements Comparable<CanonicalState> {
      *
      * @param currPerm The current permutation
      * @return null if there is no next permutation, the next permutation
-     * otherwise.
+     * otherwise. Modification is in-place.
      */
     public static int[] getNextPermutation(int[] currPerm) {
         int i, j, l;
@@ -575,7 +594,7 @@ public class CanonicalState implements Comparable<CanonicalState> {
     }
 
     @Override
-    public int compareTo(CanonicalState o) {
+    public int compareTo(CanonicalStateMultiOutput o) {
         int max = Math.min(code.length, o.code.length);
         for (int i = 0; i < max; i++) {
             int r = Long.compare(code[i], o.code[i]);

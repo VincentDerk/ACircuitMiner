@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  * proceeds as before.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentBestPatternNL {
 
@@ -59,7 +59,7 @@ public class ExperimentBestPatternNL {
         String ac = "munin";
         String path = basePath + ac + ".net.ac";
         int[] k = {4};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 10;
         long longOp = Long.MAX_VALUE - Graph.SUM;
 
@@ -71,7 +71,7 @@ public class ExperimentBestPatternNL {
 
         // Find patterns
         stopwatch.reset().start();
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxInputs, xBest);
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxPorts, xBest);
         System.out.printf("Executed mining algorithm in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         //Decide best pattern

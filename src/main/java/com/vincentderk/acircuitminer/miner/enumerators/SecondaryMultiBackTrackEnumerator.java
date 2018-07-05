@@ -1,7 +1,7 @@
 package com.vincentderk.acircuitminer.miner.enumerators;
 
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -17,15 +17,15 @@ import java.util.logging.Logger;
 /**
  * The same as {@link MultiBackTrackEnumerator} but as a
  * {@link SecondaryEnumerator} it expands a given collection of
- * {@link State states} instead of expanding all nodes in the {@link Graph}.
+ * {@link StateSingleOutput states} instead of expanding all nodes in the {@link Graph}.
  * <p>
- * Of the given {@link State states} that it has to expand, it only adds those
+ * Of the given {@link StateSingleOutput states} that it has to expand, it only adds those
  * that are larger than {@code prevK}. In regards to the next expandable
- * {@link State states}: It stores any found {@link State} with a valid pattern
+ * {@link StateSingleOutput states}: It stores any found {@link StateSingleOutput} with a valid pattern
  * that is larger than {@code prevK}.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  *
  */
 public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
@@ -64,12 +64,12 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
      * @return The states that can still be expanded.
      */
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> getExpandableStates() {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
         return expandableStates;
     }
 
-    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> expandableStates;
-    private Entry<long[], ObjectArrayList<State>>[] baseStates;
+    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates;
+    private Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates;
     private final Graph g;
     private final int THREAD_COUNT;
 
@@ -89,7 +89,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
         final int thread_id;
         final AtomicInteger live_threads;
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> subPatterns;
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<com.vincentderk.acircuitminer.miner.State>> subExpandableStates;
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<com.vincentderk.acircuitminer.miner.StateSingleOutput>> subExpandableStates;
         final boolean expandAfterFlag;
         final int prevK;
 
@@ -152,15 +152,15 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
         public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate_aux(Graph g, int maxInputs) {
             this.subExpandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
             Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns = new Object2ObjectOpenCustomHashMap<>(new ArrayLongHashStrategy());
-            com.vincentderk.acircuitminer.miner.State base;
+            com.vincentderk.acircuitminer.miner.StateSingleOutput base;
 
-            ArrayDeque<com.vincentderk.acircuitminer.miner.State> stack = new ArrayDeque<>();
+            ArrayDeque<com.vincentderk.acircuitminer.miner.StateSingleOutput> stack = new ArrayDeque<>();
             ArrayDeque<Integer> indexStack = new ArrayDeque<>();
             while ((base = getBaseState()) != null) {
                 stack.push(base);
                 indexStack.push(0);
                 while (!stack.isEmpty()) {
-                    com.vincentderk.acircuitminer.miner.State c_state = stack.peek();
+                    com.vincentderk.acircuitminer.miner.StateSingleOutput c_state = stack.peek();
                     int expandIndex = indexStack.pop();
 
                     if (c_state.expandable.length <= expandIndex) {
@@ -169,7 +169,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
                     } else {
                         /* Continue expanding */
                         indexStack.push(expandIndex + 1);
-                        com.vincentderk.acircuitminer.miner.State expanded = c_state.expand(g, expandIndex);
+                        com.vincentderk.acircuitminer.miner.StateSingleOutput expanded = c_state.expand(g, expandIndex);
                         CodeOccResult codeOcc = null;
 
                         if (expanded.vertices.length > prevK && expanded.interNode == -1
@@ -190,7 +190,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
                         }
                         if (expandAfterFlag && codeOcc != null && expanded.vertices.length > prevK) {
                             //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.State[]{expanded}), (v1, v2) -> mergeStateArrays(v1, v2));
+                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArrays(v1, v2));
                         }
 
                     }
@@ -209,7 +209,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
          * @return The next State that has to be expanded. null if there is no
          * more next State.
          */
-        public com.vincentderk.acircuitminer.miner.State getBaseState() {
+        public com.vincentderk.acircuitminer.miner.StateSingleOutput getBaseState() {
             currChunkIndex++;
 
             if (currChunkIndex >= chunkEndIndex) {
@@ -227,7 +227,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
 
     @Override
     public void expandSelectedPatterns(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap,
-            Entry<long[], ObjectArrayList<State>>[] baseStates, int k,
+            Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates, int k,
             int maxInputs, boolean expandAfterFlag, int prevK) {
         this.baseStates = baseStates;
 
@@ -270,7 +270,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
         }
 
         for (int i = 0; i < threads.length; i++) {
-            for (Object2ObjectMap.Entry<long[], ObjectArrayList<State>> p : Object2ObjectMaps.fastIterable(threads[i].subExpandableStates)) {
+            for (Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> p : Object2ObjectMaps.fastIterable(threads[i].subExpandableStates)) {
                 expandableStates.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2StateArrays(v1, v2));
             }
         }
@@ -295,7 +295,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
      * @param newV The list of elements to add to {@code old}.
      * @return {@code old}
      */
-    private static ObjectArrayList<State> merge2StateArrays(ObjectArrayList<State> old, ObjectArrayList<State> newV) {
+    private static ObjectArrayList<StateSingleOutput> merge2StateArrays(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
         old.addAll(newV);
         return old;
     }
@@ -307,7 +307,7 @@ public class SecondaryMultiBackTrackEnumerator implements SecondaryEnumerator {
      * @param newV A list of which to get the first element.
      * @return {@code old}
      */
-    private static ObjectArrayList<State> mergeStateArrays(ObjectArrayList<State> old, ObjectArrayList<State> newV) {
+    private static ObjectArrayList<StateSingleOutput> mergeStateArrays(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
         old.add(newV.get(0));
         return old;
     }

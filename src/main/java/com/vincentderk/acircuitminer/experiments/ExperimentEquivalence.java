@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  * enough to perform this in a short time span for large graphs (1000+ nodes).
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentEquivalence {
 
@@ -55,7 +55,7 @@ public class ExperimentEquivalence {
         String ac = "alarm";
         String path = basePath + ac + ".net.ac";
         int[] k = {9};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 10;
 
         // Load graph
@@ -67,7 +67,7 @@ public class ExperimentEquivalence {
 
         // Find patterns
         stopwatch.reset().start();
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxInputs, xBest);
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxPorts, xBest);
         System.out.printf("Executed total algorithm in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         //Decide best pattern

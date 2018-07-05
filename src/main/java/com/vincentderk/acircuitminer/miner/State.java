@@ -9,9 +9,9 @@ import java.util.Arrays;
  * to further expansion.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
-public class State implements Cloneable {
+public abstract class State implements Cloneable {
 
     /**
      * The vertices that are part of this state. These are in a sorted order so
@@ -33,32 +33,19 @@ public class State implements Cloneable {
      */
     public int[] unexpandable;
 
-    /**
-     * The tracked internal node that functions as another external output yet
-     * to be covered. -1 if there is no such node present.
-     */
-    public int interNode;
 
-    /**
-     * The root node of this State. (Graph numbering)
-     */
-    public final int root;
 
     /**
      * Create a state with the given arguments.
      *
-     * @param root The root node of this State.
      * @param vertices The vertices of this state.
      * @param expandable The expandable array of this state.
      * @param unexpandable the unexpandable array of this state.
-     * @param interNode The interNode of this state. -1 if there is none.
      */
-    public State(int root, int[] vertices, int[] expandable, int[] unexpandable, int interNode) {
-        this.root = root;
+    public State(int[] vertices, int[] expandable, int[] unexpandable) {
         this.vertices = vertices;
         this.expandable = expandable;
         this.unexpandable = unexpandable;
-        this.interNode = interNode;
     }
 
     /**
@@ -73,68 +60,7 @@ public class State implements Cloneable {
      * @return The state resulting from expanding this state with the given
      * choice.
      */
-    public State expand(Graph g, int expandIndex) {
-        //Note: The node to expand with musn't be part of unexpandable, vertices and can also
-        //not be in expandable on an index lower than expandIndex.
-        int expandNode = expandable[expandIndex];
-        int vertexInsertIndex = Arrays.binarySearch(vertices, expandNode);
-        int[] n_vertices;
-        int[] n_expandable;
-        int[] n_unexpandable;
-        int n_interNode;
-
-        //Inserted in the sorted vertices
-        vertexInsertIndex = Math.abs(++vertexInsertIndex);
-        n_vertices = new int[vertices.length + 1];
-        System.arraycopy(vertices, 0, n_vertices, 0, vertexInsertIndex);
-        n_vertices[vertexInsertIndex] = expandNode;
-        System.arraycopy(vertices, vertexInsertIndex, n_vertices, vertexInsertIndex + 1, vertices.length - vertexInsertIndex);
-
-        //Fix unexpandable (unexpandable + expandable upto expandIndex)
-        // unexpandable (sorted), expandable (sorted)
-        //Distinct, sorted
-        n_unexpandable = createN_unexpandable(unexpandable, expandable, expandIndex);
-
-        //Fix expandable (expandable children + expandable from expandIndex+1 + excl. n_unexpandable en n_vertices.)
-        //Distinct, sorted, filtered.
-        n_expandable = createN_expandable(expandable, expandIndex, g.expandable_children[expandNode], n_unexpandable, n_vertices);
-
-        //Fix InterNode
-        n_interNode = interNode;
-        if (interNode == expandNode) {
-            n_interNode = -1;
-
-            //First check expandNode, more likely there
-            for (int user : g.out[expandNode]) {
-                if (Arrays.binarySearch(n_vertices, user) < 0) {
-                    n_interNode = user;
-                    break;
-                }
-            }
-            if (n_interNode == -1) { //still -1, check all other nodes then
-                for (int vertex : n_vertices) {
-                    if (vertex != root && vertex != expandNode) {
-                        for (int user : g.out[vertex]) {
-                            if (Arrays.binarySearch(n_vertices, user) < 0) {
-                                n_interNode = user;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            //Find new interNode or == -1
-        } else if (interNode == -1 && g.out[expandNode].length > 1) {
-            for (int user : g.out[expandNode]) {
-                if (Arrays.binarySearch(n_vertices, user) < 0) {
-                    n_interNode = user;
-                    break;
-                }
-            }
-        }
-
-        return new State(root, n_vertices, n_expandable, n_unexpandable, n_interNode);
-    }
+    public abstract State expand(Graph g, int expandIndex);
 
     /**
      * Creates n_unexpandable from the given unexpandable and expandable each
@@ -148,7 +74,7 @@ public class State implements Cloneable {
      * expandable upto expandIndex and unexp_children). Besides merged, the
      * result is sorted and distinct.
      */
-    private int[] createN_unexpandable(int[] unexpandable, int[] expandable, int expandIndex) {
+    protected int[] createN_unexpandable(int[] unexpandable, int[] expandable, int expandIndex) {
         /*
             We want to merge all inputs (unexpandable, expandable upto expandIndex).
             Besides merging we want the result to be sorted and distinct.
@@ -228,7 +154,7 @@ public class State implements Cloneable {
      * is made distinct, sorted and elements of n_vertices and n_unexpandable
      * are filtered out.
      */
-    private int[] createN_expandable(int[] expandable, int expandIndex, int[] children, int[] n_unexpandable, int[] n_vertices) {
+    protected int[] createN_expandable(int[] expandable, int expandIndex, int[] children, int[] n_unexpandable, int[] n_vertices) {
         /*
             We want to merge 2 inputs (children, expandable starting from expandIndex+1.
             Besides merging we want the result to be sorted and distinct and the elements
@@ -345,18 +271,7 @@ public class State implements Cloneable {
      * @param g
      * @return
      */
-    public CodeOccResult getCodeOcc(Graph g) {
-        /*
-        long[] code = EdgeCanonical.minCanonicalPermutation(g, this);
-        if(EdgeCanonical.printCode(code).contains("59")) { //DEBUG - PRINTING A SELECT code
-            System.out.println("Found code " + EdgeCanonical.printCode(code) + " for " + vertices.length + "," + expandable.length + "," + unexpandable.length);
-            System.out.println("root: " + root);
-            System.out.println("vertices: " + Arrays.toString(vertices));
-            System.out.println("expandable: " + Arrays.toString(expandable));
-            System.out.println("unexpandable: " + Arrays.toString(unexpandable));
-        }*/
-        return EdgeCanonical.minCanonicalPermutation(g, this);
-    }
+    public abstract CodeOccResult getCodeOcc(Graph g);
 
     /**
      * Get the canonical labeling of this occurrence.
@@ -366,8 +281,6 @@ public class State implements Cloneable {
      * {@link com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical.minCanonicalPermutation(Graph, State)}
      * @see EdgeCanonical
      */
-    public long[] getCode(Graph g) {
-        return EdgeCanonical.minCanonicalPermutation(g, this).code;
-    }
+    public abstract long[] getCode(Graph g);
 
 }

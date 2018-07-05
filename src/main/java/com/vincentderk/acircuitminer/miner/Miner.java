@@ -29,7 +29,7 @@ import com.vincentderk.acircuitminer.miner.enumerators.PrimaryEnumerator;
  * connected to another node twice.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class Miner {
 
@@ -57,7 +57,7 @@ public class Miner {
      * @param k The sizes to mine upto. Size of a pattern is determined by the
      * amount of operations in it.
      * @param verbose Prints more
-     * @param maxInputs The maximum amount of input ports. Note all found
+     * @param maxPorts The maximum amount of ports. Note all found
      * patterns only have 1 output port.
      * @param xBest The x best patterns to select for the next iteration.
      * @return An array of entries from pattern to its occurrences. An
@@ -67,7 +67,7 @@ public class Miner {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public static Map.Entry<long[], ObjectArrayList<int[]>>[] execute(Graph g, int[] k, boolean verbose, int maxInputs, int xBest) throws FileNotFoundException, IOException {
+    public static Map.Entry<long[], ObjectArrayList<int[]>>[] execute(Graph g, int[] k, boolean verbose, int maxPorts, int xBest) throws FileNotFoundException, IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         /* First enumeration */
         System.out.println("--------------------------------------------------------");
@@ -77,7 +77,7 @@ public class Miner {
         PrimaryEnumerator enumerator = new MultiBackTrackEnumerator(g);
         boolean expandAfterFlag = k.length != 1;
         stopwatch.reset().start();
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap = enumerator.enumerate(g, k[0], maxInputs, expandAfterFlag);
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap = enumerator.enumerate(g, k[0], maxPorts, expandAfterFlag);
         System.out.printf("enumerated and found " + patternsMap.size() + " patterns in %s secs using %s.\n", stopwatch.elapsed(TimeUnit.SECONDS), enumerator);
 
         if (verbose) {
@@ -89,7 +89,7 @@ public class Miner {
         }
 
         /* Second enumeration */
-        Map.Entry<long[], ObjectArrayList<State>>[] interestingStates = null;
+        Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] interestingStates = null;
         if (k.length > 1) {
             //TODO: Base second enumeration on |k| best or on current global best?
             interestingStates = Utils.filter(enumerator.getExpandableStates(), xBest);
@@ -102,7 +102,7 @@ public class Miner {
             /* Filter previous*/
 
             System.out.println("Expanding (occurrenceCount) code:");
-            for (Map.Entry<long[], ObjectArrayList<State>> entry : interestingStates) {
+            for (Map.Entry<long[], ObjectArrayList<StateSingleOutput>> entry : interestingStates) {
                 System.out.println("(" + entry.getValue().size() + ") " + EdgeCanonical.printCode(entry.getKey()));
             }
             System.out.println("");
@@ -110,7 +110,7 @@ public class Miner {
             stopwatch.reset().start();
             //SecondaryEnumerator secondaryEnumerator = new SecondaryBackTrackEnumerator(g);
             SecondaryEnumerator secondaryEnumerator = new SecondaryMultiBackTrackEnumerator(g);
-            secondaryEnumerator.expandSelectedPatterns(patternsMap, interestingStates, k[i], maxInputs, expandAfterFlag, k[i - 1]);
+            secondaryEnumerator.expandSelectedPatterns(patternsMap, interestingStates, k[i], maxPorts, expandAfterFlag, k[i - 1]);
             System.out.printf("enumerated and found " + patternsMap.size() + " patterns in %s secs using %s.\n", stopwatch.elapsed(TimeUnit.SECONDS), secondaryEnumerator);
 
             if (verbose) {
@@ -192,7 +192,7 @@ public class Miner {
         }
 
         /* Second enumeration */
-        Map.Entry<long[], ObjectArrayList<State>>[] interestingStates = null;
+        Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] interestingStates = null;
         if (k.length > 1) {
             //TODO: Base second enumeration on |k| best or on current global best?
             interestingStates = Utils.filter(enumerator.getExpandableStates(), xBest);
@@ -205,7 +205,7 @@ public class Miner {
             /* Filter previous*/
 
             System.out.println("Expanding (occurrenceCount) code:");
-            for (Map.Entry<long[], ObjectArrayList<State>> entry : interestingStates) {
+            for (Map.Entry<long[], ObjectArrayList<StateSingleOutput>> entry : interestingStates) {
                 System.out.println("(" + entry.getValue().size() + ") " + EdgeCanonical.printCode(entry.getKey()));
             }
             System.out.println("");

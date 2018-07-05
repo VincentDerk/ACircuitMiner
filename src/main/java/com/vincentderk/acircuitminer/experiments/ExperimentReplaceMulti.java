@@ -25,7 +25,7 @@ import java.util.stream.Stream;
  * find the next best pattern until no occurrences are left that do not overlap.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentReplaceMulti {
 
@@ -58,7 +58,7 @@ public class ExperimentReplaceMulti {
         String ac = "munin";
         String path = basePath + ac + ".net.ac";
         int[] k = {6, 10, 14, 20};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 10;
 
         // Load graph
@@ -68,7 +68,7 @@ public class ExperimentReplaceMulti {
 
         // Find patterns
         stopwatch.reset().start();
-        Entry<long[], ObjectArrayList<int[]>>[] patterns = Miner.execute(g, k, verbose, maxInputs, xBest);
+        Entry<long[], ObjectArrayList<int[]>>[] patterns = Miner.execute(g, k, verbose, maxPorts, xBest);
         System.out.printf("Executed total algorithm in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         // Filter out patterns we want

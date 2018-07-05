@@ -2,7 +2,7 @@ package com.vincentderk.acircuitminer.miner.enumerators;
 
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,17 +11,17 @@ import java.util.Map.Entry;
 
 /**
  * The same as {@link BackTrackEnumerator} but as a {@link SecondaryEnumerator}
- * it expands a given collection of {@link State states} instead of expanding
+ * it expands a given collection of {@link StateSingleOutput states} instead of expanding
  * all nodes in the {@link Graph}.
  *
  * <p>
- * Of the given {@link State states} that it has to expand, it only adds those
+ * Of the given {@link StateSingleOutput states} that it has to expand, it only adds those
  * that are larger than {@code prevK}. In regards to the next expandable
- * {@link State states}: It stores any found {@link State} with a valid pattern
+ * {@link StateSingleOutput states}: It stores any found {@link StateSingleOutput} with a valid pattern
  * that is larger than {@code prevK}.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
 
@@ -39,7 +39,7 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
     }
 
     private final Graph g;
-    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> expandableStates;
+    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates;
 
     /**
      * Get the encountered states that can still be expanded.
@@ -47,13 +47,13 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
      * @return The states that can still be expanded.
      */
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> getExpandableStates() {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
         return this.expandableStates;
     }
 
     @Override
     public void expandSelectedPatterns(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap,
-            Entry<long[], ObjectArrayList<State>>[] baseStates, int k,
+            Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates, int k,
             int maxInputs, boolean expandAfterFlag, int prevK) {
         this.baseStates = baseStates;
         if (this.baseStates.length == 0) {
@@ -61,15 +61,15 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
             return;
         }
 
-        State base;
-        ArrayDeque<State> stack = new ArrayDeque<>();
+        StateSingleOutput base;
+        ArrayDeque<StateSingleOutput> stack = new ArrayDeque<>();
         ArrayDeque<Integer> indexStack = new ArrayDeque<>();
 
         while ((base = getBaseState()) != null) {
             stack.push(base);
             indexStack.push(0);
             while (!stack.isEmpty()) {
-                State c_state = stack.peek();
+                StateSingleOutput c_state = stack.peek();
                 int expandIndex = indexStack.pop();
 
                 if (c_state.expandable.length <= expandIndex) {
@@ -78,7 +78,7 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
                 } else {
                     /* Continue expanding */
                     indexStack.push(expandIndex + 1);
-                    State expanded = c_state.expand(g, expandIndex);
+                    StateSingleOutput expanded = c_state.expand(g, expandIndex);
                     CodeOccResult codeOcc = null;
 
                     if (expanded.vertices.length > prevK && expanded.interNode == -1
@@ -98,12 +98,12 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
                         indexStack.push(0);
 
                         if (expandAfterFlag && codeOcc != null && expanded.vertices.length > prevK) {
-                            expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.State[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
+                            expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
                         }
 
                     } else if (expandAfterFlag && codeOcc != null) {
                         //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                        expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.State[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
+                        expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
                     }
                 }
             }
@@ -129,14 +129,14 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
      * @param newV A list of which to get the first element.
      * @return {@code old}
      */
-    private static ObjectArrayList<State> mergeStateArray(ObjectArrayList<State> old, ObjectArrayList<State> newV) {
+    private static ObjectArrayList<StateSingleOutput> mergeStateArray(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
         old.add(newV.get(0));
         return old;
     }
 
     private int nextNb;
     private int nextPattern;
-    private Entry<long[], ObjectArrayList<State>>[] baseStates;
+    private Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates;
 
     /**
      * Get the next unexpanded base state
@@ -144,8 +144,8 @@ public class SecondaryBackTrackEnumerator implements SecondaryEnumerator {
      * @return The next State that has to be expanded. null if there is no more
      * next State.
      */
-    public State getBaseState() {
-        ObjectArrayList<State> currStates = baseStates[nextPattern].getValue();
+    public StateSingleOutput getBaseState() {
+        ObjectArrayList<StateSingleOutput> currStates = baseStates[nextPattern].getValue();
 
         if (nextNb >= currStates.size()) {
             baseStates[nextPattern++] = null;

@@ -2,7 +2,7 @@ package com.vincentderk.acircuitminer.miner.enumerators;
 
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -34,7 +34,7 @@ import java.util.ArrayDeque;
  * occurrences that only temporarily not satisfy a restriction.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class BackTrackEnumerator implements PrimaryEnumerator {
 
@@ -56,24 +56,25 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
      * @return The states that can still be expanded.
      */
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> getExpandableStates() {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
         return expandableStates;
     }
 
-    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> expandableStates;
+    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates;
 
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int k, int maxInputs, boolean expandAfterFlag) {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int k, int maxPorts, boolean expandAfterFlag) {
+        final int maxInputs = maxPorts - 1;
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns = new Object2ObjectOpenCustomHashMap<>(new ArrayLongHashStrategy());
-        State base;
-        ArrayDeque<State> stack = new ArrayDeque<>();
+        StateSingleOutput base;
+        ArrayDeque<StateSingleOutput> stack = new ArrayDeque<>();
         ArrayDeque<Integer> indexStack = new ArrayDeque<>();
 
         while ((base = getSingleState(g)) != null) {
             stack.push(base);
             indexStack.push(0);
             while (!stack.isEmpty()) {
-                State c_state = stack.peek();
+                StateSingleOutput c_state = stack.peek();
                 int expandIndex = indexStack.pop();
 
                 if (c_state.expandable.length <= expandIndex) {
@@ -82,7 +83,7 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
                 } else {
                     /* Continue expanding */
                     indexStack.push(expandIndex + 1);
-                    State expanded = c_state.expand(g, expandIndex);
+                    StateSingleOutput expanded = c_state.expand(g, expandIndex);
                     CodeOccResult codeOcc = null;
 
                     if (expanded.interNode == -1
@@ -102,7 +103,7 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
                         indexStack.push(0);
                     } else if (expandAfterFlag && codeOcc != null) {
                         //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                        expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.State[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
+                        expandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
                     }
                 }
             }
@@ -130,7 +131,7 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
      * @param newV A list of which to get the first element.
      * @return {@code old}
      */
-    private static ObjectArrayList<State> mergeStateArray(ObjectArrayList<State> old, ObjectArrayList<State> newV) {
+    private static ObjectArrayList<StateSingleOutput> mergeStateArray(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
         old.add(newV.get(0));
         return old;
     }
@@ -138,13 +139,13 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
     private int nextNb;
 
     /**
-     * Get the next unexpanded single node {@link State}.
+     * Get the next unexpanded single node {@link StateSingleOutput}.
      *
      * @param g The graph structure for context.
      * @return The next State that has to be expanded. null if there is no more
      * next State.
      */
-    public State getSingleState(Graph g) {
+    public StateSingleOutput getSingleState(Graph g) {
         int currentNb = nextNb++;
         if (currentNb >= g.inc.length) { //Check whether there is still a node.
             return null;
@@ -156,7 +157,7 @@ public class BackTrackEnumerator implements PrimaryEnumerator {
             int[] expandable = g.expandable_children[currentNb];
             int[] unexpandable = g.unexpandable_children[currentNb];
 
-            return new State(currentNb, vertices, expandable, unexpandable, -1);
+            return new StateSingleOutput(currentNb, vertices, expandable, unexpandable, -1);
         }
     }
 
