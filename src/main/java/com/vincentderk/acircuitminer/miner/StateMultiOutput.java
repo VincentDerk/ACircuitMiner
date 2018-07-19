@@ -11,7 +11,7 @@ import java.util.Arrays;
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class StateMultiOutput extends State implements Cloneable {
+public class StateMultiOutput extends StateExpandable implements Cloneable {
 
     /**
      * Represents the vertices that provide an external output. These values are
@@ -81,18 +81,27 @@ public class StateMultiOutput extends State implements Cloneable {
      * <p>
      * The result is the same as the given outputNodes except that:
      * <lu>
-     * <li>If any parent of expandNode (in g) is not in vertices, add expandNode to outputNodes (sorted).</li>
-     * <li>For each child of expandNode (in g) that is present in outputNodes: remove from outputNodes if all its parents are in vertices. </li>
+     * <li>If any parent of expandNode (in g) is not in vertices, add expandNode
+     * to outputNodes (sorted).</li>
+     * <li>For each child of expandNode (in g) that is present in outputNodes:
+     * remove from outputNodes if all its parents are in vertices. </li>
      * </lu>
-     * @param expandNode The newly added node of which to check the parents and children
-     * @param g The graph structure in which this occurs and of which this is a state.
-     * @param outputNodes The nodes that have an external output in this state. n_outputNodes is based on outputNodes.
-     * @param vertices The vertices of this state. 
-     * @return the new outputNodes that results from the given arguments. The result is outputNodes (same reference) unless
-     * one of the two operations is applied:
+     *
+     * @param expandNode The newly added node of which to check the parents and
+     * children
+     * @param g The graph structure in which this occurs and of which this is a
+     * state.
+     * @param outputNodes The nodes that have an external output in this state.
+     * n_outputNodes is based on outputNodes.
+     * @param vertices The vertices of this state.
+     * @return the new outputNodes that results from the given arguments. The
+     * result is outputNodes (same reference) unless one of the two operations
+     * is applied:
      * <lu>
-     * <li>If any parent of expandNode (in g) is not in vertices, add expandNode to outputNodes (sorted).</li>
-     * <li>For each child of expandNode (in g) that is present in outputNodes: remove from outputNodes if all its parents are in vertices. </li>
+     * <li>If any parent of expandNode (in g) is not in vertices, add expandNode
+     * to outputNodes (sorted).</li>
+     * <li>For each child of expandNode (in g) that is present in outputNodes:
+     * remove from outputNodes if all its parents are in vertices. </li>
      * </lu>
      */
     private int[] createN_outputNodes(int expandNode, Graph g, int[] outputNodes, int[] vertices) {
@@ -117,13 +126,13 @@ public class StateMultiOutput extends State implements Cloneable {
             if (childIndex >= 0 && g.out[child].length > 1) {
                 if (allPresent(g.out[child])) {
                     //all parents of child present, remove child from outputs
-                    int[] n_outputNodes_t = Arrays.copyOf(n_outputNodes, n_outputNodes.length-1);
-                    System.arraycopy(n_outputNodes, childIndex+1, n_outputNodes_t, childIndex, n_outputNodes.length-childIndex-1);
+                    int[] n_outputNodes_t = Arrays.copyOf(n_outputNodes, n_outputNodes.length - 1);
+                    System.arraycopy(n_outputNodes, childIndex + 1, n_outputNodes_t, childIndex, n_outputNodes.length - childIndex - 1);
                     n_outputNodes = n_outputNodes_t;
                 }
             }
         }
-        
+
         return n_outputNodes;
     }
 
@@ -149,31 +158,32 @@ public class StateMultiOutput extends State implements Cloneable {
      * contains both the code of this state as well as the vertices of this
      * state ordered according to the assignment in the code.
      *
+     * <p>
+     * Restriction on this state in g: the incoming edges to each node may only
+     * contain distinct values. No node may be directly connected to the same
+     * node twice.
+     *
      * @param g The graph where this state is an occurrence in.
      * @return The canonical labeling result of this occurrence as determined by
-     * {@link com.vincentderk.acircuitminer.miner.canonical.EdgeCanonicalMultiOutput.minCanonicalPermutation(Graph, State)}
+     * {@link EdgeCanonicalMultiOutput#minCanonicalPermutation(Graph, StateMultiOutput)}
      * @see EdgeCanonicalMultiOutput
      */
     @Override
     public CodeOccResult getCodeOcc(Graph g) {
-        /*
-        long[] code = EdgeCanonical.minCanonicalPermutation(g, this);
-        if(EdgeCanonical.printCode(code).contains("59")) { //DEBUG - PRINTING A SELECT code
-            System.out.println("Found code " + EdgeCanonical.printCode(code) + " for " + vertices.length + "," + expandable.length + "," + unexpandable.length);
-            System.out.println("root: " + root);
-            System.out.println("vertices: " + Arrays.toString(vertices));
-            System.out.println("expandable: " + Arrays.toString(expandable));
-            System.out.println("unexpandable: " + Arrays.toString(unexpandable));
-        }*/
         return EdgeCanonicalMultiOutput.minCanonicalPermutation(g, this);
     }
 
     /**
      * Get the canonical labeling of this occurrence.
      *
+     * <p>
+     * Restriction on this state in g: the incoming edges to each node may only
+     * contain distinct values. No node may be directly connected to the same
+     * node twice.
+     *
      * @param g The graph where this state is an occurrence in.
      * @return The canonical labeling of this occurrence as determined by
-     * {@link com.vincentderk.acircuitminer.miner.canonical.EdgeCanonicalMultiOutput.minCanonicalPermutation(Graph, State)}
+     * {@link EdgeCanonicalMultiOutput#minCanonicalPermutation(Graph, StateMultiOutput)}
      * @see EdgeCanonicalMultiOutput
      */
     @Override

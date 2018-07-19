@@ -3,7 +3,6 @@ package com.vincentderk.acircuitminer.miner.canonical;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.StateMultiOutput;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -123,7 +122,7 @@ public class EdgeCanonicalMultiOutput {
 
         CodeOccResult bestResult = null;
         CanonicalStateMultiOutput bestCanonicalState = null;
-        
+
         int[] outputNodeSequence = state.outputNodes.clone(); //Relies on outputNodes being sorted
 
         do {
@@ -161,21 +160,25 @@ public class EdgeCanonicalMultiOutput {
         return bestResult;
     }
 
-    //TODO: Add MultiOutput label support
     /**
      * Convert the given code to a more readable version (+,*,0,1,2,...)
      *
      * @param code The canonical labeling, as is stored in
      * {@link CodeOccResult}.
      * @return The readable version of the given code. Each element in code
-     * represents either a (x,y) or A where A is an operation. If it is an
-     * operation, it is converted to *,+ or i (input). If it an edge, it is
-     * converted to the (x,y) representation. This is done for each element and
-     * appended in that order.
+     * represents either a (x,y) or A where A is an operation.
+     * <ul>
+     * <li>If it is an operation, it is converted to *,+ or i (input). To denote
+     * and operation with an additional external output, o is appended. e.g. *o
+     * and +o.</li>
+     * <li>If it an edge, it is converted to the (x,y) representation.</li>
+     * </ul>
+     * This is done for each element and appended in that order.
+     *
      * @throws IllegalArgumentException if there is an operation that it does
      * not cover. Only
-     * {@link Graph#SUM}, {@link Graph#PRODUCT}, {@link Graph#INPUT} are
-     * allowed.
+     * {@link Graph#SUM}, {@link Graph#SUM_OUTPUT}, {@link Graph#PRODUCT}, {@link Graph#PRODUCT_OUTPUT}
+     * and {@link Graph#INPUT} are allowed.
      */
     public static String printCode(long[] code) {
         StringBuilder builder = new StringBuilder();
@@ -194,8 +197,14 @@ public class EdgeCanonicalMultiOutput {
                     case Graph.PRODUCT:
                         builder.append("*");
                         break;
+                    case Graph.PRODUCT_OUTPUT:
+                        builder.append("*o");
+                        break;
                     case Graph.SUM:
                         builder.append("+");
+                        break;
+                    case Graph.SUM_OUTPUT:
+                        builder.append("+o");
                         break;
                     case Graph.INPUT:
                         builder.append("i");

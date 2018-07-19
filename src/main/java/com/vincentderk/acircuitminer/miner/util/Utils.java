@@ -324,8 +324,8 @@ public class Utils {
      * The cost of evaluating the given pattern as if it was an available
      * hardware component.
      * <p>
-     * <b>Note: The cost of + and * is independent of the amount of inputs
-     * of it. So +/3 = +/2.</b>
+     * <b>Note: The cost of + and * is independent of the amount of inputs of
+     * it. So +/3 = +/2.</b>
      * <br>If another pattern is to be emulated, use
      * {@link #patternBlockCost(EmulatableBlock, int)} as it accounts for
      * inactive nodes and inputs.
@@ -369,10 +369,11 @@ public class Utils {
      * emulate the pattern {@link EmulatableBlock#emulatedCode}, as if P was
      * available as a hardware block.
      * <p>
-     * <b>Note: The cost of + and * is independent of the amount of inputs
-     * of it. So +/3 = +/2.</b>
-     * <br>If the hardware block P is used with all actual inputs, thus to evaluate
-     * its own pattern, {@link #patternBlockCost(long[], int)} can be used.
+     * <b>Note: The cost of + and * is independent of the amount of inputs of
+     * it. So +/3 = +/2.</b>
+     * <br>If the hardware block P is used with all actual inputs, thus to
+     * evaluate its own pattern, {@link #patternBlockCost(long[], int)} can be
+     * used.
      *
      * @param emulatedBlock The information of the pattern that the hardware
      * block in question is to emulate. This is linked to the pattern of the
@@ -478,6 +479,7 @@ public class Utils {
      * @param xBest The x best (most occurring) patterns.
      * @return The xBest best patterns according to
      * {@link EntryStateCom}{@code (false)}.
+     * @see EntryStateCom
      */
     public static Entry<long[], ObjectArrayList<StateSingleOutput>>[] filter(Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates, int xBest) {
         Entry<long[], ObjectArrayList<StateSingleOutput>>[] filtered
@@ -490,8 +492,8 @@ public class Utils {
     }
 
     /**
-     * Count the amount of nodes (both internal and input) present in the
-     * given code.
+     * Count the amount of nodes (both internal and input) present in the given
+     * code.
      *
      * @param code The code to get the amount of nodes of.
      * @return The amount of nodes (both internal and input) present in the
@@ -608,7 +610,7 @@ public class Utils {
 
         return map;
     }
-    
+
     /**
      * Get a map of codeId's mapped to their appropriate input index. For
      * example, if node 8 in the code is the 3rd input (order given by
@@ -738,7 +740,8 @@ public class Utils {
     }
 
     /**
-     * Reads the AC from the given reader (.ac file format) and returns the literal map.
+     * Reads the AC from the given reader (.ac file format) and returns the
+     * literal map.
      *
      * @param reader The reader reading the AC file
      * @return The literal map of the AC file.

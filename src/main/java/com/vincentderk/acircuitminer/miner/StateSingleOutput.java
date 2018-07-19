@@ -11,14 +11,14 @@ import java.util.Arrays;
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class StateSingleOutput extends State implements Cloneable {
+public class StateSingleOutput extends StateExpandable implements Cloneable {
 
     /**
      * The tracked internal node that functions as another external output yet
      * to be covered. -1 if there is no such node present.
      */
     public int interNode;
-    
+
     /**
      * The root node of this State. (Graph numbering)
      */
@@ -120,22 +120,18 @@ public class StateSingleOutput extends State implements Cloneable {
      * contains both the code of this state as well as the vertices of this
      * state ordered according to the assignment in the code.
      *
+     * <p>
+     * Restriction on this state in g: the incoming edges to each node may only contain
+     * distinct values. No node may be directly connected to the same node
+     * twice.
+     *
      * @param g The graph where this state is an occurrence in.
      * @return The canonical labeling result of this occurrence as determined by
-     * {@link com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical.minCanonicalPermutation(Graph, State)}
+     * {@link EdgeCanonical#minCanonicalPermutation(Graph, StateSingleOutput)}
      * @see EdgeCanonical
      */
     @Override
     public CodeOccResult getCodeOcc(Graph g) {
-        /*
-        long[] code = EdgeCanonical.minCanonicalPermutation(g, this);
-        if(EdgeCanonical.printCode(code).contains("59")) { //DEBUG - PRINTING A SELECT code
-            System.out.println("Found code " + EdgeCanonical.printCode(code) + " for " + vertices.length + "," + expandable.length + "," + unexpandable.length);
-            System.out.println("root: " + root);
-            System.out.println("vertices: " + Arrays.toString(vertices));
-            System.out.println("expandable: " + Arrays.toString(expandable));
-            System.out.println("unexpandable: " + Arrays.toString(unexpandable));
-        }*/
         return EdgeCanonical.minCanonicalPermutation(g, this);
     }
 
@@ -144,7 +140,7 @@ public class StateSingleOutput extends State implements Cloneable {
      *
      * @param g The graph where this state is an occurrence in.
      * @return The canonical labeling of this occurrence as determined by
-     * {@link com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical.minCanonicalPermutation(Graph, State)}
+     * {@link EdgeCanonical#minCanonicalPermutation(Graph, StateSingleOutput)}
      * @see EdgeCanonical
      */
     @Override

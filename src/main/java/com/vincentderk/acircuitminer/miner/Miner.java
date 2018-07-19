@@ -160,7 +160,7 @@ public class Miner {
      * @param k The sizes to mine upto. Size of a pattern is determined by the
      * amount of operations in it.
      * @param verbose Prints more
-     * @param maxInputs The maximum amount of input ports. Note all found
+     * @param maxPorts The maximum amount of ports. Note all found
      * patterns only have 1 output port.
      * @param xBest The x best patterns to select for the next iteration.
      * @return An array of entries from pattern to its occurrences. An
@@ -170,7 +170,7 @@ public class Miner {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public static Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> executeRaw(Graph g, int[] k, boolean verbose, int maxInputs, int xBest) throws FileNotFoundException, IOException {
+    public static Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> executeRaw(Graph g, int[] k, boolean verbose, int maxPorts, int xBest) throws FileNotFoundException, IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         /* First enumeration */
         System.out.println("--------------------------------------------------------");
@@ -180,7 +180,7 @@ public class Miner {
         PrimaryEnumerator enumerator = new MultiBackTrackEnumerator(g);
         boolean expandAfterFlag = k.length != 1;
         stopwatch.reset().start();
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap = enumerator.enumerate(g, k[0], maxInputs, expandAfterFlag);
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap = enumerator.enumerate(g, k[0], maxPorts, expandAfterFlag);
         System.out.printf("Enumerated and found " + patternsMap.size() + " patterns in %s secs using %s.\n", stopwatch.elapsed(TimeUnit.SECONDS), enumerator);
 
         if (verbose) {
@@ -228,12 +228,4 @@ public class Miner {
         return patternsMap;
     }
 
-    private static void printMemory() {
-        List<MemoryPoolMXBean> pools = ManagementFactory.getMemoryPoolMXBeans();
-        pools.forEach((pool) -> {
-            MemoryUsage peak = pool.getPeakUsage();
-            System.out.println(String.format("Peak %s memory used: %,d", pool.getName(), peak.getUsed()));
-            System.out.println(String.format("Peak %s memory reserved: %,d", pool.getName(), peak.getCommitted()));
-        });
-    }
 }
