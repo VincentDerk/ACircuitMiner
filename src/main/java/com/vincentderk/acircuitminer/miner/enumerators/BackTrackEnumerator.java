@@ -7,14 +7,11 @@ import com.vincentderk.acircuitminer.miner.StateExpandable;
 import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
+import com.vincentderk.acircuitminer.miner.util.Misc;
 import com.vincentderk.acircuitminer.miner.util.Utils;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.MemoryUsage;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -67,21 +64,22 @@ import java.util.concurrent.TimeUnit;
  * to {@link Graph#SUM},{@link Graph#PRODUCT} and {@link Graph#INPUT}.</li>
  * <li>k (maximum pattern/occurrence size) has a highest possible value defined
  * by {@code (k,k-1) <} {@link Long#MAX_VALUE} - {@link Graph#HIGHEST_OP} where
- * (k,k-1) represents a Long value with the highest 32 bits as k and the
- * lowest 32 bits as k-1.</li>
- * <li>For each found occurrence: {@code nb_of_edges + nb_of_nodes <} {@link Integer#MAX_VALUE}.</li>
+ * (k,k-1) represents a Long value with the highest 32 bits as k and the lowest
+ * 32 bits as k-1.</li>
+ * <li>For each found occurrence:
+ * {@code nb_of_edges + nb_of_nodes <} {@link Integer#MAX_VALUE}.</li>
  * </ul>
  *
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class BackTrackIncompleteEnumerator implements Enumerator {
+public class BackTrackEnumerator implements ExpandableEnumerator {
 
     /**
      * Creates a new {@link Enumerator} with an empty
      * {@link #getExpandableStates() expandableStates}.
      */
-    public BackTrackIncompleteEnumerator() {
+    public BackTrackEnumerator() {
         expandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
     }
 
@@ -92,11 +90,8 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
 
     /**
      * Get the encountered states that can still be expanded. This is only
-     * correct right after calling
-     * {@link #enumerateComplete(com.vincentderk.acircuitminer.miner.Graph, int, int, boolean)}
-     * with {@code expandAfterFlag = true} or after calling
-     * {@link #expandSelectedPatterns(it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap, java.util.Map.Entry<long[],it.unimi.dsi.fastutil.objects.ObjectArrayList<com.vincentderk.acircuitminer.miner.StateSingleOutput>>[],
-     * int, int, boolean, int)}.
+     * correct right after calling {@link #enumerate(Graph, int, int)} or after
+     * calling {@link #enumerate(Graph, int[], boolean, int, int)}.
      * <p>
      * Beware, clone the result when modifications are required. Modifying the
      * returned object can affect further calls. Further calls to this
@@ -104,6 +99,7 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
      *
      * @return The states that can still be expanded.
      */
+    @Override
     public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
         return this.expandableStates;
     }
@@ -204,7 +200,13 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
 
     /**
      * Used by {@link #getSingleState(Graph)} to keep track of the next node to
-     * expand. Initially, before expanding, this value should/will be set to 0.
+     * expand.
+     * <p>
+     * Used by
+     * {@link #getBaseState(java.util.Map.Entry<long[],it.unimi.dsi.fastutil.objects.ObjectArrayList<StateSingleOutput>>[])}
+     * to keep track of the next pattern to expand.
+     * <p>
+     * <b>Initially, before expanding, this value should/will be set to 0.</b>
      */
     protected int nextNb;
 
@@ -249,9 +251,13 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
     // Start of 'deepening methods' that continue the (incomplete search) to bigger patterns.
     // --------------------------------------------------------------------------
     /**
-     * Performs an (in)complete enumeration.
+     * Performs an (in)complete enumeration by first performing a complete
+     * enumeration upto the first k value and then heuristically expanding upon
+     * these results.
+     *
      * <ul>
-     * <li>Execute the algorithm ({@link BackTrackEnumerator}) upto size
+     * <li>Execute the algorithm
+     * ({@link BackTrackEnumerator#enumerate(Graph, int, int)}) upto size
      * {@code k[0]}.</li>
      * <li>pick the {@code xBest} that had not been extended due to size and
      * expand these till size {@code k[1]}.</li>
@@ -269,13 +275,14 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
      * @param g The graph to mine the occurrences in.
      * @param k The sizes to mine upto. Size of a pattern is determined by the
      * amount of operations in it.
-     * @param verbose Prints more
      * @param maxPorts The maximum amount of input+output ports. Note, all found
      * patterns will only have 1 output port.
      * @param xBest The x best patterns to select for the next iteration.
+     * @param verbose Prints more information
      * @return Mapping of patterns to lists of occurrences of that pattern.
      */
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int[] k, boolean verbose, int maxPorts, int xBest) {
+    @Override
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int[] k, int maxPorts, int xBest, boolean verbose) {
         if (k.length == 1) {
             return enumerate(g, k[0], maxPorts);
         }
@@ -293,10 +300,10 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
 
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap = enumerateComplete(g, k[0], maxPorts, true);
 
-        if (verbose) {
+        if (verbose && stopwatch != null) {
             System.out.printf("enumerated and found " + patternsMap.size() + " patterns in %s secs using BackTrackIncompleteEnumerator.\n", stopwatch.elapsed(TimeUnit.SECONDS));
             System.out.println("");
-            printMemory();
+            Misc.printMemory();
             System.out.println("");
             System.out.println("Printing results...");
             Utils.writeResults(patternsMap, true);
@@ -312,7 +319,7 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
             boolean expandAfterFlag = (i + 1 != k.length);
 
             /* Previously filtered */
-            if (verbose) {
+            if (verbose && stopwatch != null) {
                 System.out.println("--------------------------------------------------------");
                 System.out.println("Iteration " + (i + 1) + " k=" + k[i]);
                 System.out.println("Expanding (occurrenceCount) code:");
@@ -326,10 +333,10 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
             //Expands and adds result to patternsMap
             expandSelectedPatterns(g, patternsMap, interestingStates, k[i], maxPorts, expandAfterFlag, k[i - 1]);
 
-            if (verbose) {
+            if (verbose && stopwatch != null) {
                 System.out.printf("enumerated and found " + patternsMap.size() + " patterns in an additional %s secs using BackTrackEnumerator.\n", stopwatch.elapsed(TimeUnit.SECONDS));
                 System.out.println("");
-                printMemory();
+                Misc.printMemory();
             }
 
             if (i + 1 < k.length) {
@@ -342,16 +349,17 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
 
     /**
      * Extend the patternsMap by extending the occurrences of the
-     * expandablePatterns in the patternsMap. Both patternsMap and
-     * expandablePatterns will be modified.
+     * baseStates. Both {@link patternsMap} and {@link baseStates} will
+     * be modified, as well as class fields
+     * {@link nextNb}, {@link nextPattern} and {@link expandableStates}.
      *
      * @param g The backend graph to expand in.
      * @param patternsMap The map of patterns to extend to. Will be modified.
      * @param baseStates The states which we want to expand. Will be modified.
      * @param k The maximum pattern size, equal to the amount of internal nodes
      * (so excluding input nodes).
-     * @param maxPorts The maximum amount of ports that an occurrence
-     * ({@link State}) may have.
+     * @param maxPorts The maximum amount of input+output ports an occurrence
+     * may have. Note, all found patterns will only have 1 output port.
      * @param expandAfterFlag Denotes whether the enumerator should keep track
      * of the expandableStates. If this is the last enumeration of the process,
      * set to false. Otherwise use true.
@@ -362,7 +370,7 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
             Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates, int k,
             int maxPorts, boolean expandAfterFlag, int prevK) {
 
-        final int maxInputs = maxPorts;
+        final int maxInputs = maxPorts - 1;
         nextNb = 0;
         nextPattern = 0;
         expandableStates.clear();
@@ -426,6 +434,9 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
     /**
      * Get the next unexpanded base {@link StateSingleOutput} ('base' being a
      * state to start expanding from).
+     * <p>
+     * This updates {@link nextNb}, {@link nextPattern} and the given
+     * {@code baseStates}.
      *
      * @param baseStates The states which we want to expand. Will be modified.
      *
@@ -448,15 +459,4 @@ public class BackTrackIncompleteEnumerator implements Enumerator {
         return currStates.get(nextNb++);
     }
 
-    /**
-     * Prints some information about the used memory.
-     */
-    protected void printMemory() {
-        List<MemoryPoolMXBean> pools = ManagementFactory.getMemoryPoolMXBeans();
-        pools.forEach((pool) -> {
-            MemoryUsage peak = pool.getPeakUsage();
-            System.out.println(String.format("Peak %s memory used: %,d", pool.getName(), peak.getUsed()));
-            System.out.println(String.format("Peak %s memory reserved: %,d", pool.getName(), peak.getCommitted()));
-        });
-    }
 }

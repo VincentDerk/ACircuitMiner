@@ -10,8 +10,8 @@ import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * The {@link ForwardEnumerator} uses a semi-BFS approach. This means it requires more
- * memory. The runtime starts off being very similar to
+ * The {@link ForwardEnumerator} uses a semi-BFS approach. This means it
+ * requires more memory. The runtime starts off being very similar to
  * {@link BackTrackEnumerator} but as soon as the graph gets big it gets slower.
  * However, it might be useful when we prune every stage. This would be harder
  * for the DFS approach ({@link BackTrackEnumerator}) as they only have all the
@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Semi-BFS: It expands a state in all possible ways and then proceeds with one
  * of them in the same way. This is different from {@link BackTrackEnumerator}
  * in that {@link BackTrackEnumerator} keeps track of which ways it has already
- * expanded in. So when a {@link StateSingleOutput} is fully expanded, it backtracks back to
- * the previously expanded {@link StateSingleOutput} and expands it in a different way.
+ * expanded in. So when a {@link StateSingleOutput} is fully expanded, it
+ * backtracks back to the previously expanded {@link StateSingleOutput} and
+ * expands it in a different way.
  * <p>
  * For now, it is probably inferior to {@link BackTrackEnumerator} and
  * {@link MultiBackTrackEnumerator}.
@@ -29,31 +30,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class ForwardEnumerator implements PrimaryEnumerator {
+public class ForwardEnumerator implements Enumerator {
 
     public ForwardEnumerator(Graph g) {
         nextNb = new AtomicInteger(0);
-        expandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
     }
 
-    /**
-     * Get the encountered states that can still be expanded.
-     *
-     * @return The states that can still be expanded.
-     */
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
-        return expandableStates;
-    }
-
-    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates;
-
-    @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int k, int maxPorts, boolean expandAfterFlag) {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int k, int maxPorts) {
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns = new Object2ObjectOpenCustomHashMap<>(new ArrayLongHashStrategy());
 
         final int maxInputs = maxPorts - 1;
-        
+
         long cTime = System.currentTimeMillis();
         ArrayDeque<StateSingleOutput> deque = getSingleStates(g);
         System.out.println("Retrieved single states in " + (System.currentTimeMillis() - cTime));
@@ -80,9 +68,6 @@ public class ForwardEnumerator implements PrimaryEnumerator {
 
                 if (expanded.vertices.length < k) {
                     deque.add(expanded);
-                } else if (expandAfterFlag && codeOcc != null) {
-                    //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                    expandableStates.merge(codeOcc.code, new ObjectArrayList(new StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArray(v1, v2));
                 }
             }
         }
@@ -123,8 +108,8 @@ public class ForwardEnumerator implements PrimaryEnumerator {
      */
     public ArrayDeque<StateSingleOutput> getSingleStates(Graph g) {
         ArrayDeque<StateSingleOutput> result = new ArrayDeque<>();
-        
-        StateSingleOutput s = null;
+
+        StateSingleOutput s;
         while ((s = getSingleState(g)) != null) {
             result.add(s);
         }
@@ -133,12 +118,12 @@ public class ForwardEnumerator implements PrimaryEnumerator {
     }
 
     /**
-     * Get the next unexpanded single {@link StateSingleOutput}. This can be called
-     * concurrently since it is based on an {@link AtomicInteger}.
+     * Get the next unexpanded single {@link StateSingleOutput}. This can be
+     * called concurrently since it is based on an {@link AtomicInteger}.
      *
      * @param g The graph structure for context.
-     * @return The next {@link StateSingleOutput} that has to be expanded. null if there is
-     * no more next {@link StateSingleOutput}.
+     * @return The next {@link StateSingleOutput} that has to be expanded. null
+     * if there is no more next {@link StateSingleOutput}.
      */
     public StateSingleOutput getSingleState(Graph g) {
         int currentNb = nextNb.getAndIncrement();
