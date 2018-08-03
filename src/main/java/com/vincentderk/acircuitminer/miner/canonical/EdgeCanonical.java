@@ -1,7 +1,7 @@
 package com.vincentderk.acircuitminer.miner.canonical;
 
 import com.vincentderk.acircuitminer.miner.Graph;
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayDeque;
@@ -61,15 +61,15 @@ import java.util.Arrays;
  * </ul>
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class EdgeCanonical {
 
     /**
-     * Get the minimal canonical code. This creates a {@link State} of the given
-     * Graph and calls {@link #minCanonicalPermutation(Graph, State)}. During
-     * conversion, all nodes with the special marker {@link Graph#MARKER} are
-     * excluded.
+     * Get the minimal canonical code. This creates a {@link StateSingleOutput}
+     * of the given Graph and calls
+     * {@link #minCanonicalPermutation(Graph, State)}. During conversion, all
+     * nodes with the special marker {@link Graph#MARKER} are excluded.
      *
      * @param g The graph to get the code of.
      * @return The canonical code result of the given graph g while excluding
@@ -100,7 +100,7 @@ public class EdgeCanonical {
         unexpandable = unexpandableList.toIntArray();
         unexpandableList = null;
 
-        State state = new State(root, vertices, expandable, unexpandable, interNode);
+        StateSingleOutput state = new StateSingleOutput(root, vertices, expandable, unexpandable, interNode);
         return minCanonicalPermutation(g, state);
     }
 
@@ -113,11 +113,13 @@ public class EdgeCanonical {
      *
      * @param g The graph
      * @param state The state of which the code is returned.
-     * @return The minimal canonical code of the given state. Each (e1,e2) is a
-     * long. Every set of edges starting from a certain node is followed by the
-     * label of that node.
+     * @return Information regarding the minimal canonical code of the given
+     * state. Canonical code: Each (e1,e2) is a long and every set of edges
+     * starting from a certain node is followed by the label (operation) of that
+     * node. e.g. {@code (0,1)(0,2)+(1,3)(1,4)*} where + and * are also encoded
+     * as a long value.
      */
-    public static CodeOccResult minCanonicalPermutation(Graph g, State state) {
+    public static CodeOccResult minCanonicalPermutation(Graph g, StateSingleOutput state) {
         int nbVertex = state.vertices.length;
 
         CanonicalState root = new CanonicalState(state);
@@ -154,10 +156,13 @@ public class EdgeCanonical {
      * @param code The canonical labeling, as is stored in
      * {@link CodeOccResult}.
      * @return The readable version of the given code. Each element in code
-     * represents either a (x,y) or A where A is an operation. If it is an
-     * operation, it is converted to *,+ or i (input). If it an edge, it is
-     * converted to the (x,y) representation. This is done for each element and
-     * appended in that order.
+     * represents either a (x,y) or A where A is an operation.
+     * <ul>
+     * <li>If it is an operation, it is converted to *,+ or i (input).</li>
+     * <li>If it an edge, it is converted to the (x,y) representation.</li>
+     * </ul>
+     * This is done for each element and appended in that order.
+     *
      * @throws IllegalArgumentException if there is an operation that it does
      * not cover. Only
      * {@link Graph#SUM}, {@link Graph#PRODUCT}, {@link Graph#INPUT} are
@@ -201,8 +206,7 @@ public class EdgeCanonical {
      *
      * @param list The list of CanonicalStates to check. This list is modified.
      * @return A new list of all the CanonicalStates that have the 'smallest'
-     * code as defined by
-     * {@link CanonicalState#compareTo(CanonicalState)}.
+     * code as defined by {@link CanonicalState#compareTo(CanonicalState)}.
      */
     private static ArrayDeque<CanonicalState> prune(ArrayDeque<CanonicalState> list) {
         ArrayDeque<CanonicalState> result = new ArrayDeque<>();
@@ -229,10 +233,9 @@ public class EdgeCanonical {
 
     /**
      * Get the minimal canonical code using a Depth first search. This creates a
-     * {@link State} of the given Graph and calls
-     * {@link #minCanonicalPermutationDFS(Graph, State)}. During
-     * conversion, all nodes with the special marker {@link Graph#MARKER} are
-     * excluded.
+     * {@link StateSingleOutput} of the given Graph and calls
+     * {@link #minCanonicalPermutationDFS(Graph, State)}. During conversion, all
+     * nodes with the special marker {@link Graph#MARKER} are excluded.
      *
      * @param g The graph to get the code of.
      * @return The canonical code result of the given graph g while excluding
@@ -263,7 +266,7 @@ public class EdgeCanonical {
         unexpandable = unexpandableList.toIntArray();
         unexpandableList = null;
 
-        State state = new State(root, vertices, expandable, unexpandable, interNode);
+        StateSingleOutput state = new StateSingleOutput(root, vertices, expandable, unexpandable, interNode);
         return minCanonicalPermutationDFS(g, state);
     }
 
@@ -277,7 +280,7 @@ public class EdgeCanonical {
      * long. Every set of edges starting from a certain node is followed by the
      * label of that node.
      */
-    public static CodeOccResult minCanonicalPermutationDFS(Graph g, State state) {
+    public static CodeOccResult minCanonicalPermutationDFS(Graph g, StateSingleOutput state) {
         /**
          * Since we perform a depth-first approach we only need one
          * CanonicalState (c_state) to keep track of the ids assigned to the

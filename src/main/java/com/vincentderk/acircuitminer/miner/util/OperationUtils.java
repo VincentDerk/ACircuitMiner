@@ -29,7 +29,7 @@ import java.util.Map.Entry;
  * .ac file, getting total execution energy costs, removing overlap,...
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class OperationUtils {
 
@@ -814,10 +814,12 @@ public class OperationUtils {
         /* INSTR,*,+,output,input Cost */
         for (short label : g.label) {
             switch (label) {
+                case Graph.SUM_OUTPUT:
                 case Graph.SUM:
                     costs[SUM_INDEX]++;
                     costs[IO_INDEX]++; //output
                     break;
+                case Graph.PRODUCT_OUTPUT:
                 case Graph.PRODUCT:
                     costs[MULT_INDEX]++;
                     costs[IO_INDEX]++; //output

@@ -1,6 +1,6 @@
 package com.vincentderk.acircuitminer.miner.util.comparators;
 
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import static com.vincentderk.acircuitminer.miner.util.Utils.patternProfitState;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -14,9 +14,9 @@ import java.util.Comparator;
  * ({@link com.vincentderk.acircuitminer.miner.util.Utils#patternProfitState(long[], ObjectArrayList)}).
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
-public class EntryProfitStateCom implements Comparator<Object2ObjectMap.Entry<long[], ObjectArrayList<State>>> {
+public class EntryProfitStateCom implements Comparator<Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>>> {
 
     /**
      * Compares pattern entries where the key is the pattern and the value is
@@ -39,7 +39,7 @@ public class EntryProfitStateCom implements Comparator<Object2ObjectMap.Entry<lo
     private final boolean lowToHigh;
 
     @Override
-    public int compare(Object2ObjectMap.Entry<long[], ObjectArrayList<State>> o1, Object2ObjectMap.Entry<long[], ObjectArrayList<State>> o2) {
+    public int compare(Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> o1, Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> o2) {
         //Compress profit (vertices-1 * occurence count)
         double o1CompressProfit = patternProfitState(o1.getKey(), o2.getValue());
         double o2CompressProfit = patternProfitState(o1.getKey(), o2.getValue());

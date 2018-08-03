@@ -34,7 +34,7 @@ import java.util.stream.Stream;
  * check for overlap internally with the remaining occurrences.</b>
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentReplaceMultiReNO {
 
@@ -75,7 +75,7 @@ public class ExperimentReplaceMultiReNO {
         String ac = "alarm";
         String path = basePath + ac + ".net.ac";
         int[] k = {10};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 10;
 
         // Load graph
@@ -85,7 +85,7 @@ public class ExperimentReplaceMultiReNO {
 
         // Find patterns
         stopwatch.reset().start();
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxInputs, xBest);
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsAll = Miner.executeRaw(g, k, verbose, maxPorts, xBest);
         Entry<long[], ObjectArrayList<int[]>>[] patterns = OperationUtils.removeOverlap(patternsAll, null);
         System.out.println("");
         System.out.println("Printing results (Overlap still present) ...");

@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  * the occurrences and writes both the pattern and the resulting new AC to file.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
 public class ExperimentReplaceAlarm {
 
@@ -54,7 +54,7 @@ public class ExperimentReplaceAlarm {
         String path = basePath + ac + ".net.ac";
         //int[] k = {5};
         int[] k = {17, 25, 30};
-        int maxInputs = 15; // Default: 16 minus 1 for the output.
+        int maxPorts = 16;
         int xBest = 100;
 
         // Load graph
@@ -64,7 +64,7 @@ public class ExperimentReplaceAlarm {
 
         // Find patterns
         stopwatch.reset().start();
-        Entry<long[], ObjectArrayList<int[]>>[] patterns = Miner.execute(g, k, verbose, maxInputs, xBest);
+        Entry<long[], ObjectArrayList<int[]>>[] patterns = Miner.execute(g, k, verbose, maxPorts, xBest);
         System.out.printf("Executed total algorithm in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         for (int i = 2; i <= k[k.length - 1]; i++) {

@@ -1,6 +1,7 @@
 package com.vincentderk.acircuitminer.miner.enumerators;
 
-import com.vincentderk.acircuitminer.miner.State;
+import com.vincentderk.acircuitminer.miner.Graph;
+import com.vincentderk.acircuitminer.miner.StateExpandable;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -11,14 +12,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
  * expand some states.
  *
  * @author Vincent Derkinderen
- * @version 1.0
+ * @version 2.0
  */
-public interface ExpandableEnumerator {
+public interface ExpandableEnumerator extends Enumerator {
 
     /**
      * Get the encountered states that can still be expanded.
      *
      * @return The states that can still be expanded.
      */
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<State>> getExpandableStates();
+    public Object2ObjectOpenCustomHashMap<long[], ? extends ObjectArrayList<? extends StateExpandable>> getExpandableStates();
+
+    
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int[] k, int maxPorts, int xBest, boolean verbose);
 }
