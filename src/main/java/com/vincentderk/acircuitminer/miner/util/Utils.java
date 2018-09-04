@@ -21,6 +21,7 @@ import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import java.util.Comparator;
 
+//TODO: Verify which Utils methods work for SOSR/MOSR and update the docs.
 /**
  * Contains some useful methods such as reading from an ac. file, calculating
  * the evaluation energy costs of occurrences or patterns, counting the amount

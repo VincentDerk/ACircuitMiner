@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+//TODO: Verify which operationUtils methods work for SOSR/MOSR and update the docs.
 /**
  * Contains some useful operations such as replacing occurrences, writing to an
  * .ac file, getting total execution energy costs, removing overlap,...
