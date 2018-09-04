@@ -1,9 +1,8 @@
 package com.vincentderk.acircuitminer.miner.emulatable.neutralfinder;
 
 import com.vincentderk.acircuitminer.miner.Graph;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
-import com.vincentderk.acircuitminer.miner.util.OperationUtils;
-import com.vincentderk.acircuitminer.miner.util.Utils;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.canonical.CanonicalNeutralState;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.canonical.CodeStatePair;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.canonical.NeutralEdgeCanonical;
@@ -15,9 +14,9 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /**
- * Finds the patterns that a given pattern (as a Graph) can emulate. This is
- * done by trying each possible combination of values for the inputs and then
- * checking the pattern it results in.
+ * Finds the patterns that a given {@link SOSR} pattern (as a Graph) can
+ * emulate. This is done by trying each possible combination of values for the
+ * inputs and then checking the pattern it results in.
  * <p>
  * Furthermore, for each node, we keep track of the possible values it may get
  * assigned. We use 2 to refer to actual user-input. 0 and 1 are used for the
@@ -36,6 +35,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
  * is set. When all consequences are determined, the next input port is given a
  * value. When all input ports have a value, the emulated pattern is determined
  * by using {@link NeutralEdgeCanonical}.
+ * <p>
+ * Note: This class only supports {@link SOSR} (Single Output Single Root)
+ * graphs.
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -51,7 +53,7 @@ public class NeutralFinder {
      * @see #getEmulatablePatterns(Graph)
      */
     public ObjectArrayList<long[]> getEmulatablePatterns(long[] pattern) {
-        Graph graph = OperationUtils.codeToGraph(pattern);
+        Graph graph = Graph.codeToGraph(pattern);
         return getEmulatablePatterns(graph);
     }
 
@@ -102,7 +104,7 @@ public class NeutralFinder {
      * @see #getEmulatablePatternsMap(Graph)
      */
     public Object2ObjectOpenCustomHashMap<long[], EmulatableBlock> getEmulatablePatternsMap(long[] pattern) {
-        Graph graph = OperationUtils.codeToGraph(pattern);
+        Graph graph = Graph.codeToGraph(pattern);
         return getEmulatablePatternsMap(graph);
     }
 
@@ -121,7 +123,7 @@ public class NeutralFinder {
     public Object2ObjectOpenCustomHashMap<long[], EmulatableBlock> getEmulatablePatternsMap(Graph graph) {
         mapping = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
         validInputCounter = 0;
-        inputNodes = Utils.getInputNodes(graph);
+        inputNodes = graph.getInputNodes();
         g = graph;
 
         //Init neutralState
@@ -273,9 +275,14 @@ public class NeutralFinder {
      * Get the emulatable block associated with the given state and
      * emulatedCode. It contains the information of the emulation such as the
      * amount of active nodes.
+     * <p>
+     * This method uses {@link SOSR#getInputNodeCount(long[])}.
      *
      * @param state The state to get the block of.
      * @param emulatedCode The emulatedCode to set.
+     * @param emulatedIndexToActualInputIndex A mapping of the input index in
+     * the emulated code to the input index in the actual code (actual given by
+     * {@code}).
      * @return The emulatedBlock associated with the given state and
      * emulatedCode.
      *
@@ -316,7 +323,7 @@ public class NeutralFinder {
             }
         }
 
-        block.activeInputCount = Utils.inputNodeCount(emulatedCode);
+        block.activeInputCount = SOSR.getInputNodeCount(emulatedCode);
         block.activeMultCount = activeMultCount;
         block.activeSumCount = activeSumCount;
         block.inactiveMultCount = inactiveMultCount;

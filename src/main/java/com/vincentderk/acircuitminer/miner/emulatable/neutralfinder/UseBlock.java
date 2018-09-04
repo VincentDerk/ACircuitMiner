@@ -1,6 +1,6 @@
 package com.vincentderk.acircuitminer.miner.emulatable.neutralfinder;
 
-import com.vincentderk.acircuitminer.miner.util.Utils;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /**
@@ -12,6 +12,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
  * Usage:
  * First populate {@link #patternP}, {@link #patterns} and {@link #occurrences}.
  * Then call {@link #calculateProfit()} to set the {@link #profit} to the correct value.
+ * <p>
+ * Note: This class only supports {@link SOSR} (Single Output Single Root) graphs.
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -53,18 +55,18 @@ public class UseBlock {
      * patterns in {@link #patterns}. When replacing an emulated pattern is not
      * beneficial, it must not be present.
      * 
-     * @see Utils#patternOccurrenceCost(long[], int) 
-     * @see Utils#patternBlockCost(EmulatableBlock, int) 
+     * @see SOSR#patternOccurrenceCost(long[], int) 
+     * @see SOSR#patternBlockCost(EmulatableBlock, int) 
      */
     public void calculateProfit() {
         long totalProfit = 0;
 
-        totalProfit += Utils.patternProfit(patternP, occurrences.get(0).size());
+        totalProfit += SOSR.patternProfit(patternP, occurrences.get(0).size());
 
         for (int i = 0; i < patterns.length; i++) {
             int occCount = occurrences.get(i + 1).size();
-            double extraProfit = (Utils.patternOccurrenceCost(patterns[i].emulatedCode, 1)
-                    - Utils.patternBlockCost(patterns[i], 1)) * occCount;
+            double extraProfit = (SOSR.patternOccurrenceCost(patterns[i].emulatedCode, 1)
+                    - SOSR.patternBlockCost(patterns[i], 1)) * occCount;
             
             totalProfit += extraProfit;
         }

@@ -9,8 +9,8 @@ import java.util.Collection;
 
 /**
  * Class used by {@link EdgeCanonical} in performing the canonical labeling of a
- * rooted DAG. It stores information regarding the assignment of ids (0,1,2,..) to the
- * nodes in a graph ({@link StateSingleOutput} object).
+ * rooted DAG. It stores information regarding the assignment of ids (0,1,2,..)
+ * to the nodes in a graph ({@link StateSingleOutput} object).
  *
  * @author Vincent Derkinderen
  * @version 2.0
@@ -140,7 +140,20 @@ public class CanonicalState implements Comparable<CanonicalState> {
         }
 
         //Label in the code
-        extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        if (this.n == 1) { //First (root) node gets output operation
+            switch (g.label[node]) {
+                case Graph.PRODUCT:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.PRODUCT_OUTPUT;
+                    break;
+                case Graph.SUM:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.SUM_OUTPUT;
+                    break;
+                default:
+                    extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+            }
+        } else {
+            extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        }
 
         //Start of the new extension list. Except for the Not yet assigned but 
         //expandable (non input)  children (UANI), every edge is filled in.
@@ -281,7 +294,20 @@ public class CanonicalState implements Comparable<CanonicalState> {
         }
 
         //Label in the code
-        extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        if (this.n == 1) { //First (root) node gets output operation
+            switch (g.label[node]) {
+                case Graph.PRODUCT:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.PRODUCT_OUTPUT;
+                    break;
+                case Graph.SUM:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.SUM_OUTPUT;
+                    break;
+                default:
+                    extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+            }
+        } else {
+            extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        }
         this.code = extra;
 
         //Start of the new extension list. Except for the Not yet assigned but 

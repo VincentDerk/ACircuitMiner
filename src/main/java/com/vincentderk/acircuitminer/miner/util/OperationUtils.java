@@ -1,14 +1,12 @@
 package com.vincentderk.acircuitminer.miner.util;
 
 import com.vincentderk.acircuitminer.miner.Graph;
-import static com.vincentderk.acircuitminer.miner.util.Utils.nodeCount;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.EmulatableBlock;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.UseBlock;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.AbstractObject2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -335,7 +333,7 @@ public class OperationUtils {
      * @see #writePatternGraph(FileWriter, Graph, IntArrayList, HashMap)
      */
     public static void writePattern(long[] best, String patternPath, HashMap<Short, String> symbols) throws IOException {
-        Graph patternGraph = codeToGraph(best);
+        Graph patternGraph = Graph.codeToGraph(best);
         FileWriter writer = new FileWriter(patternPath);
         writePatternGraph(writer, patternGraph, new IntArrayList(), symbols);
     }
@@ -439,7 +437,7 @@ public class OperationUtils {
      * @see Utils#getInputNodesMap(Graph)
      */
     public static void writePatternGraph(FileWriter writer, Graph patternGraph, IntArrayList ignore, HashMap<Short, String> symbols) throws IOException {
-        Int2IntMap inputMap = Utils.getInputNodesMap(patternGraph);
+        Int2IntMap inputMap = patternGraph.getInputNodesMap();
         OperationUtils.writePatternGraph(writer, patternGraph, new IntArrayList(), symbols, inputMap);
     }
 
@@ -462,8 +460,8 @@ public class OperationUtils {
      * determine the actual nodeCount. Can be empty.
      * @param symbols The symbols which every label maps to. Every label should
      * be present.
-     * @param literalMap A mapping of graph.inc index to its appropriate input
-     * index. See {@link Utils#getInputNodesMap(Graph)}.
+     * @param literalMap A mapping of {@link Graph#inc} index to its appropriate
+     * input index. See {@link Graph#getInputNodesMap()}.
      * @throws java.io.IOException
      */
     public static void writePatternGraph(FileWriter writer, Graph g, IntArrayList ignore, HashMap<Short, String> symbols, Int2IntMap literalMap) throws IOException {
@@ -480,7 +478,7 @@ public class OperationUtils {
     }
 
     /**
-     * Auxiliary method for {@link writePatternGraph}. It deals with the
+     * Auxiliary method for {@link #writePatternGraph}. It deals with the
      * {@code k}'th index in the graph. This is a recursive method that may
      * executes the same method to process the indices incoming to the current
      * index {@code k}.
@@ -492,8 +490,8 @@ public class OperationUtils {
      * -&gt line number it appears on)
      * @param symbols The symbols which every label maps to. Every label should
      * be present.
-     * @param literalMap A mapping of graph.inc index to its appropriate input
-     * index. See {@link Utils#getInputNodesMap(Graph)}.
+     * @param literalMap A mapping of {@link Graph#inc} index to its appropriate
+     * input index. See {@link Graph#getInputNodesMap()}.
      *
      * @return The line number assigned to index k of g's incoming structure.
      * The given lineMap is also updated with indices that were handled.
@@ -558,83 +556,6 @@ public class OperationUtils {
             index = Math.abs(index + 1);
             return node - index;
         }
-    }
-
-    /**
-     * Add all the vertices in the code, with their respective label, to the
-     * graph.
-     *
-     * @param g The graph to add the vertices to.
-     * @param code The code to get the vertices from.
-     */
-    private static void addVertices(Graph g, long[] code) {
-        //Internal:
-        int index = 0;
-        IntSet nodes = new IntOpenHashSet();
-        while (index < code.length) {
-            //Get left element of group
-            int left = (int) (code[index] >> 32);
-            nodes.add(left);
-            //Skip to the label
-            while (code[index] < Long.MAX_VALUE - Graph.HIGHEST_OP) {
-                index++;
-            }
-
-            //Get label
-            short label = (short) (Long.MAX_VALUE - code[index]);
-            g.addVertex(left, label);
-            index++;
-        }
-
-        //External:
-        for (long l : code) {
-            if (l < Long.MAX_VALUE - Graph.HIGHEST_OP) {
-                long mask = ((long) 1 << 32) - 1; //32 1 bits: 0..0111..111
-                int right = (int) (mask & l);
-
-                if (!nodes.contains(right)) {
-                    nodes.add(right);
-                    g.addVertex(right, Graph.INPUT);
-                }
-            }
-        }
-    }
-
-    /**
-     * Add the edges in the code to the given graph
-     * <p>
-     * All vertices must be added before this is called.
-     *
-     * @param g The graph to add edges to
-     * @param code The code to get the edges of
-     */
-    private static void addEdges(Graph g, long[] code) {
-        for (long l : code) {
-            if (l < Long.MAX_VALUE - Graph.HIGHEST_OP) {
-                int left = (int) (l >> 32);
-                long mask = ((long) 1 << 32) - 1; //32 1 bits: 0..0111..111
-                int right = (int) (mask & l);
-
-                g.addEdge(right, left);
-            }
-        }
-    }
-
-    /**
-     * Convert a code to a graph.
-     *
-     * @param code The code to convert
-     * @return The graph associated with the code
-     */
-    public static Graph codeToGraph(long[] code) {
-        int nodeCount = nodeCount(code);
-        Graph g = new Graph(nodeCount);
-
-        addVertices(g, code);
-        addEdges(g, code);
-        g.finishBuild();
-
-        return g;
     }
 
     /**
@@ -773,77 +694,6 @@ public class OperationUtils {
             }
         }
         return new AbstractObject2ObjectMap.BasicEntry<>(before.getKey(), newValues);
-    }
-
-    /**
-     * Get the cost associated with evaluating the given Graph. This can only
-     * handle * and +.
-     *
-     * @param g The graph to get the cost of.
-     * @return The costs of the graph in the form of instructionCost + ioCost +
-     * (*-cost) + (+-cost).
-     * @see #getCosts
-     */
-    public static long getTotalCosts(Graph g) {
-        long[] costs = getCosts(g);
-        long instrCost = costs[0];
-        long ioCost = costs[1];
-        long sumCost = costs[2];
-        long prodCost = costs[3];
-        long totalCost = instrCost + ioCost + sumCost + prodCost;
-
-        return totalCost;
-    }
-
-    /**
-     * Get the costs associated with evaluating the given Graph. This can only
-     * handle * and +.
-     *
-     * @param g The graph to get the cost of.
-     * @return The costs of the graph in the form of {instructionCost, ioCost,
-     * *-cost, +-cost}.
-     */
-    public static long[] getCosts(Graph g) {
-        long[] costs = new long[4];
-        final int INSTR_INDEX = 0;
-        final int IO_INDEX = 1;
-        final int SUM_INDEX = 2;
-        final int MULT_INDEX = 3;
-
-
-        /* INSTR,*,+,output,input Cost */
-        for (short label : g.label) {
-            switch (label) {
-                case Graph.SUM_OUTPUT:
-                case Graph.SUM:
-                    costs[SUM_INDEX]++;
-                    costs[IO_INDEX]++; //output
-                    break;
-                case Graph.PRODUCT_OUTPUT:
-                case Graph.PRODUCT:
-                    costs[MULT_INDEX]++;
-                    costs[IO_INDEX]++; //output
-                    break;
-                default:
-                    break;
-            }
-        }
-        costs[INSTR_INDEX] = costs[MULT_INDEX] + costs[SUM_INDEX]; //#*, #+
-
-        //input        
-        int activeInputs = 0;
-        for (int[] incPorts : g.inc) {
-            activeInputs += incPorts.length;
-        }
-        costs[IO_INDEX] += activeInputs;
-
-        /* Multiply weight */
-        costs[INSTR_INDEX] = costs[INSTR_INDEX] * Utils.INSTRUCTION_COST_BASE + activeInputs * Utils.INSTRUCTION_COST_EXTRA;
-        costs[SUM_INDEX] *= Utils.SUM_COST;
-        costs[MULT_INDEX] *= Utils.MULTIPLICATION_COST;
-        costs[IO_INDEX] *= Utils.IO_COST;
-
-        return costs;
     }
 
 }

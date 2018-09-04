@@ -5,8 +5,8 @@ import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonicalMultiOutput;
 import java.util.Arrays;
 
 /**
- * A data structure to keep track of an occurrence and its information in regard
- * to further expansion.
+ * A data structure to keep track of an occurrence with multiple output nodes
+ * and the information of that occurrence in regard to further expansion.
  *
  * @author Vincent Derkinderen
  * @version 2.0

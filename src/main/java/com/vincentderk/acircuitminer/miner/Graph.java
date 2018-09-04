@@ -1,5 +1,11 @@
 package com.vincentderk.acircuitminer.miner;
 
+import com.vincentderk.acircuitminer.miner.util.Utils;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.Arrays;
 
 /**
@@ -173,7 +179,8 @@ public class Graph {
 
     /**
      * Finish the building process of this {@link Graph}.
-     * <>When a vertex has null as {@link #inc}, it gets set to
+     * <p>
+     * When a vertex has null as {@link #inc}, it gets set to
      * {@code new int[0]}.
      */
     public void finishBuild() {
@@ -182,21 +189,6 @@ public class Graph {
                 inc[i] = new int[0];
             }
         }
-    }
-
-    /**
-     * Get the amount of edges in this graph.
-     * <>This iterates over the incoming structure and sums up the amount of
-     * incoming for each node.
-     *
-     * @return The sum of all incoming edges for each node.
-     */
-    public int getEdgeCount() {
-        int count = 0;
-        for (int[] incs : this.inc) {
-            count = (incs != null) ? (count + incs.length) : count;
-        }
-        return count;
     }
 
     @Override
@@ -225,6 +217,130 @@ public class Graph {
     }
 
     /**
+     * --------------- Additional Graph Creation ------------------
+     */
+    /**
+     * Convert a code to a {@link Graph}.
+     * <p>
+     * This method currently uses {@link MOSR#getNodeCount(long[])} and
+     * therefore only supports a {@link SOSR} or {@link MOSR} type of {@code code}.
+     *
+     * @param code The code to convert into a graph.
+     * @return The graph associated with the code
+     */
+    public static Graph codeToGraph(long[] code) {
+        int nodeCount = MOSR.getNodeCount(code);
+        Graph g = new Graph(nodeCount);
+
+        addVertices(g, code);
+        addEdges(g, code);
+        g.finishBuild();
+
+        return g;
+    }
+
+    /**
+     * Add all the vertices in {@code code}, with their respective label, to
+     * graph {@code g}.
+     * <p>
+     * The required {@code code} format is a sequence of chunks where a chunk
+     * is: {@code (a,b)(a,c)(a,d)...A} with A the label (operation) of a.
+     *
+     * @param g The graph to add the vertices to.
+     * @param code The code to get the vertices of {@code g} from.
+     */
+    private static void addVertices(Graph g, long[] code) {
+        //Internal:
+        int index = 0;
+        IntSet nodes = new IntOpenHashSet();
+        while (index < code.length) {
+            //Get left element of group
+            int left = (int) (code[index] >> 32);
+            nodes.add(left);
+            //Skip to the label
+            while (code[index] < Long.MAX_VALUE - Graph.HIGHEST_OP) {
+                index++;
+            }
+
+            //Get label
+            short label = (short) (Long.MAX_VALUE - code[index]);
+            g.addVertex(left, label);
+            index++;
+        }
+
+        //External:
+        for (long l : code) {
+            if (l < Long.MAX_VALUE - Graph.HIGHEST_OP) {
+                long mask = ((long) 1 << 32) - 1; //32 1 bits: 0..0111..111
+                int right = (int) (mask & l);
+
+                if (!nodes.contains(right)) {
+                    nodes.add(right);
+                    g.addVertex(right, Graph.INPUT);
+                }
+            }
+        }
+    }
+
+    /**
+     * Add the edges in the code to the given graph
+     * <p>
+     * All vertices must be added before this is called.
+     *
+     * @param g The graph to add edges to
+     * @param code The code to get the edges of
+     * @see #addVertices(com.vincentderk.acircuitminer.miner.Graph, long[])
+     */
+    private static void addEdges(Graph g, long[] code) {
+        for (long l : code) {
+            if (l < Long.MAX_VALUE - Graph.HIGHEST_OP) {
+                int left = (int) (l >> 32);
+                long mask = ((long) 1 << 32) - 1; //32 1 bits: 0..0111..111
+                int right = (int) (mask & l);
+
+                g.addEdge(right, left);
+            }
+        }
+    }
+
+    /**
+     * --------------- Some Get methods ------------------
+     */
+    /**
+     * Get the amount of edges in this graph.
+     * <p>
+     * This iterates over the incoming structure and sums up the amount of
+     * incoming for each node.
+     *
+     * @return The sum of all incoming edges for each node.
+     */
+    public int getEdgeCount() {
+        int count = 0;
+        for (int[] incs : this.inc) {
+            count = (incs != null) ? (count + incs.length) : count;
+        }
+        return count;
+    }
+
+    /**
+     * Count the amount of operation nodes (so only internal nodes) present in
+     * the given graph.
+     *
+     * @return The amount of labels in g that are not equal to
+     * {@link Graph#INPUT} or {@link Graph#MARKER}.
+     */
+    public int getOperationNodeCount() {
+        int opCount = 0;
+
+        for (short s : label) {
+            if (s != Graph.INPUT && s != Graph.MARKER) {
+                opCount++;
+            }
+        }
+        return opCount;
+    }
+
+    /**
      * The first node (0...) that has no output and a label different from
      * {@link #MARKER}.
      *
@@ -241,4 +357,117 @@ public class Graph {
 
         return -1;
     }
+
+    /**
+     * Get the input nodes (indices) in order of appearance in the graph.
+     * <br>This iterates over all labels and returns the indices which have an
+     * input label, in that order.
+     *
+     * @return The nodes (indices) that are input nodes in the given graph. The
+     * order is from small to high index.
+     */
+    public int[] getInputNodes() {
+        IntArrayList list = new IntArrayList();
+
+        for (int i = 0; i < label.length; i++) {
+            if (label[i] == Graph.INPUT) {
+                list.add(i);
+            }
+        }
+
+        return list.toIntArray();
+    }
+
+    /**
+     * Get a map of nodeId's (in this graph) to their appropriate input index.
+     * For example if node 8 in the graph is the 3rd input (order given by
+     * {@link #getInputNodes()}) then the returned map maps 8 to 3.
+     *
+     * @return A mapping of codeId (id of nodes in this graph) to the
+     * appropriate input index of that codeId.
+     * @see #getInputNodes()
+     */
+    public Int2IntMap getInputNodesMap() {
+        int[] orderedInput = getInputNodes();
+        Int2IntMap map = new Int2IntOpenHashMap();
+
+        for (int i = 0; i < orderedInput.length; i++) {
+            map.put(orderedInput[i], i);
+        }
+
+        return map;
+    }
+
+    /**
+     * Get the costs associated with evaluating this {@link Graph}.
+     * <br>This can only handle * ({@link #PRODUCT},{@link #PRODUCT_OUTPUT}) and
+     * + ({@link #SUM},{@link #SUM_OUTPUT}).
+     *
+     * @return The costs of this graph in the form of {@code long[] {instructionCost, ioCost,
+     * *-cost, +-cost}}.
+     */
+    public long[] getCosts() {
+        long[] costs = new long[4];
+        final int INSTR_INDEX = 0;
+        final int IO_INDEX = 1;
+        final int SUM_INDEX = 2;
+        final int MULT_INDEX = 3;
+
+
+        /* INSTR,*,+,output,input Cost */
+        for (short l : label) {
+            switch (l) {
+                case SUM_OUTPUT:
+                case SUM:
+                    costs[SUM_INDEX]++;
+                    costs[IO_INDEX]++; //output
+                    break;
+                case PRODUCT_OUTPUT:
+                case PRODUCT:
+                    costs[MULT_INDEX]++;
+                    costs[IO_INDEX]++; //output
+                    break;
+                default:
+                    break;
+            }
+        }
+        costs[INSTR_INDEX] = costs[MULT_INDEX] + costs[SUM_INDEX]; //#*, #+
+
+        //input        
+        int activeInputs = 0;
+        for (int[] incPorts : inc) {
+            activeInputs += incPorts.length;
+        }
+        costs[IO_INDEX] += activeInputs;
+
+        /* Multiply weight */
+        costs[INSTR_INDEX] = costs[INSTR_INDEX] * Utils.INSTRUCTION_COST_BASE + activeInputs * Utils.INSTRUCTION_COST_EXTRA;
+        costs[SUM_INDEX] *= Utils.SUM_COST;
+        costs[MULT_INDEX] *= Utils.MULTIPLICATION_COST;
+        costs[IO_INDEX] *= Utils.IO_COST;
+
+        return costs;
+    }
+
+    /**
+     * Get the total cost associated with evaluating this {@link Graph}.
+     * <br>This can only handle * ({@link #PRODUCT},{@link #PRODUCT_OUTPUT}) and
+     * + ({@link #SUM},{@link #SUM_OUTPUT}).
+     *
+     * @return The costs of evaluating this graph. It accounts for the
+     * instruction cost, the cost of performing the + and * operations and the
+     * IO cost.
+     * @see #getCosts
+     */
+    public long getTotalCosts() {
+        long[] costs = getCosts();
+        long instrCost = costs[0];
+        long ioCost = costs[1];
+        long sumCost = costs[2];
+        long prodCost = costs[3];
+        long totalCost = instrCost + ioCost + sumCost + prodCost;
+
+        return totalCost;
+    }
+
 }

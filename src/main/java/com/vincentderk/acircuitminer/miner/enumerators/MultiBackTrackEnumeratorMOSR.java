@@ -2,13 +2,13 @@ package com.vincentderk.acircuitminer.miner.enumerators;
 
 import com.google.common.base.Stopwatch;
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
-import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import com.vincentderk.acircuitminer.miner.Graph;
+import com.vincentderk.acircuitminer.miner.StateMultiOutput;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.Misc;
 import com.vincentderk.acircuitminer.miner.util.Utils;
-import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitStateCom;
+import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitStateMOSRCom;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
@@ -21,17 +21,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The same as {@link BackTrackEnumerator} but now allowing multiple threads to
- * work concurrently. When a thread is available, a next node is taken as the
- * root node of an occurrence. That thread will then find all occurrences with
- * that node as the root. This is balanced as long the workload per node is
- * similar and not too high. When all threads are finished, the results are
- * combined (currently using one thread).
+ * The same as {@link MultiBackTrackEnumerator} but now finding occurrences with
+ * Multiple Output but still a Single Root (MOSR). Compared to the occurrences
+ * found in {@link MultiBackTrackEnumerator}, some nodes of those found
+ * occurrences can now have an additional externally-outgoing edge that provides
+ * another output.
+ *
+ * <p>
+ * <b>Beware, these occurrences may not all be valid in that an output can be
+ * (indirectly) required as an input of itself.</b>
  *
  * @author Vincent Derkinderen
  * @version 2.0
  */
-public class MultiBackTrackEnumerator implements ExpandableEnumerator {
+public class MultiBackTrackEnumeratorMOSR implements ExpandableEnumerator {
 
     /**
      * Creates a new {@link Enumerator} with an empty
@@ -39,7 +42,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      *
      * @param threadCount The amount of threads this enumerator should use.
      */
-    public MultiBackTrackEnumerator(int threadCount) {
+    public MultiBackTrackEnumeratorMOSR(int threadCount) {
         THREAD_COUNT = threadCount;
         nextNb = new AtomicInteger(0);
         expandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
@@ -51,7 +54,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * {@link java.lang.Runtime#availableProcessors()}.
      *
      */
-    public MultiBackTrackEnumerator() {
+    public MultiBackTrackEnumeratorMOSR() {
         THREAD_COUNT = Runtime.getRuntime().availableProcessors();
         nextNb = new AtomicInteger(0);
         expandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
@@ -69,7 +72,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * @return The states that can still be expanded if more ports are allowed.
      */
     @Override
-    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> getExpandableStates() {
+    public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateMultiOutput>> getExpandableStates() {
         return expandableStates;
     }
 
@@ -77,7 +80,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * The amount of threads this enumerator should use.
      */
     private final int THREAD_COUNT;
-    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> expandableStates;
+    private final Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateMultiOutput>> expandableStates;
 
     @Override
     public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate(Graph g, int k, int maxPorts) {
@@ -89,28 +92,28 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      */
     private class EnumThread extends Thread {
 
-        EnumThread(int thread_id, AtomicInteger live_threads, Graph g, int k, int maxInputs, boolean expandAfterFlag) {
+        EnumThread(int thread_id, AtomicInteger live_threads, Graph g, int k, int maxPorts, boolean expandAfterFlag) {
             this.thread_id = thread_id;
             this.live_threads = live_threads;
             this.g = g;
             this.k = k;
-            this.maxInputs = maxInputs;
+            this.maxPorts = maxPorts;
             this.expandAfterFlag = expandAfterFlag;
         }
 
         final int thread_id;
         final AtomicInteger live_threads;
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> subPatterns;
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> subExpandableStates;
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateMultiOutput>> subExpandableStates;
 
         final Graph g;
         final int k;
-        final int maxInputs;
+        final int maxPorts;
         final boolean expandAfterFlag;
 
         @Override
         public void run() {
-            subPatterns = enumerate_aux(g, k, maxInputs, expandAfterFlag);
+            subPatterns = enumerate_aux(g, k, maxPorts, expandAfterFlag);
             System.out.printf("Thread %d finished. Found patterns: %d. %d threads remaining.\n", thread_id, subPatterns.size(), live_threads.decrementAndGet());
         }
 
@@ -124,8 +127,8 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
          * @param g The backend graph to search in.
          * @param k The maximum pattern size, equal to the amount of internal
          * nodes. When this number is reached, extension is stopped.
-         * @param maxInputs The maximum amount of inputs that an occurrence
-         * ({link State}) may have.
+         * @param maxPorts The maximum amount of ports that an occurrence ({link
+         * State}) may have.
          * @param expandAfterFlag Denotes whether the enumerator should keep
          * track of the expandableStates. When set to true, a list of expandable
          * occurrences is kept such that they can later be retrieved
@@ -135,18 +138,18 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
          * @return Mapping of pattern -> list of the roots of the found
          * occurrences of that pattern.
          */
-        private Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate_aux(Graph g, int k, int maxInputs, boolean expandAfterFlag) {
+        private Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate_aux(Graph g, int k, int maxPorts, boolean expandAfterFlag) {
             this.subExpandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
             Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns = new Object2ObjectOpenCustomHashMap<>(new ArrayLongHashStrategy());
-            StateSingleOutput base;
+            StateMultiOutput base;
 
-            ArrayDeque<StateSingleOutput> stack = new ArrayDeque<>();
+            ArrayDeque<StateMultiOutput> stack = new ArrayDeque<>();
             ArrayDeque<Integer> indexStack = new ArrayDeque<>();
             while ((base = getSingleState(g)) != null) {
                 stack.push(base);
                 indexStack.push(0);
                 while (!stack.isEmpty()) {
-                    StateSingleOutput c_state = stack.peek();
+                    StateMultiOutput c_state = stack.peek();
                     int expandIndex = indexStack.pop();
 
                     if (c_state.expandable.length <= expandIndex) {
@@ -155,18 +158,17 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
                     } else {
                         /* Continue expanding */
                         indexStack.push(expandIndex + 1);
-                        StateSingleOutput expanded = c_state.expand(g, expandIndex);
+                        StateMultiOutput expanded = c_state.expand(g, expandIndex);
                         CodeOccResult codeOcc = null;
 
-                        if (expanded.interNode == -1
-                                && expanded.expandable.length + expanded.unexpandable.length <= maxInputs) { //Count #Inputs
+                        if (expanded.outputNodes.length + expanded.expandable.length + expanded.unexpandable.length <= maxPorts) { //Count #Inputs
                             /* Pattern occurrence count */
                             codeOcc = expanded.getCodeOcc(g);
-                            if (codeOcc.inputCount <= maxInputs) {
+                            if (codeOcc.inputCount + expanded.outputNodes.length <= maxPorts) {
                                 //System.out.println("Found " + EdgeCanonical.printCode(codeOcc.code) + " and codeOcc count " + codeOcc.inputCount + " and other " + (expanded.expandable.length + expanded.unexpandable.length));
                                 ObjectArrayList<int[]> singleObj = new ObjectArrayList<>();
                                 singleObj.add(codeOcc.lastVerticesOrdered); //vertices of expanded sorted in assigned order.
-                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> merge2Arrays(v1, v2));
+                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> merge2AddAll(v1, v2));
                             }
                         }
 
@@ -176,7 +178,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
                             indexStack.push(0);
                         } else if (expandAfterFlag && codeOcc != null) {
                             //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArrays(v1, v2));
+                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new StateMultiOutput[]{expanded}), (v1, v2) -> mergeAddFirst(v1, v2));
                         }
 
                     }
@@ -204,7 +206,6 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * graph ({@code g}) structure.
      */
     protected Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerateComplete(Graph g, int k, int maxPorts, boolean expandAfterFlag) {
-        final int maxInputs = maxPorts - 1;
         expandableStates.clear();
         nextNb.set(0);
 
@@ -214,7 +215,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
 
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int thread_id = i;
-            threads[i] = new EnumThread(thread_id, live_threads, g, k, maxInputs, expandAfterFlag);
+            threads[i] = new EnumThread(thread_id, live_threads, g, k, maxPorts, expandAfterFlag);
         }
 
         for (int i = 0; i < THREAD_COUNT; i++) {
@@ -241,27 +242,15 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
     private void merge(EnumThread[] threads, Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns) {
         for (EnumThread thread : threads) {
             for (Object2ObjectMap.Entry<long[], ObjectArrayList<int[]>> p : Object2ObjectMaps.fastIterable(thread.subPatterns)) {
-                patterns.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2Arrays(v1, v2));
+                patterns.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2AddAll(v1, v2));
             }
         }
 
         for (EnumThread thread : threads) {
-            for (Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> p : Object2ObjectMaps.fastIterable(thread.subExpandableStates)) {
-                expandableStates.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2StateArrays(v1, v2));
+            for (Object2ObjectMap.Entry<long[], ObjectArrayList<StateMultiOutput>> p : Object2ObjectMaps.fastIterable(thread.subExpandableStates)) {
+                expandableStates.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2AddAll(v1, v2));
             }
         }
-    }
-
-    /**
-     * Add all elements in newV to old.
-     *
-     * @param old The list to add to.
-     * @param newV The list of elements to add to {@code old}.
-     * @return {@code old}
-     */
-    private static ObjectArrayList<int[]> merge2Arrays(ObjectArrayList<int[]> old, ObjectArrayList<int[]> newV) {
-        old.addAll(newV);
-        return old;
     }
 
     /**
@@ -271,7 +260,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * @param newV A list of which to get the first element.
      * @return {@code old}
      */
-    private static ObjectArrayList<StateSingleOutput> mergeStateArrays(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
+    private static <T> ObjectArrayList<T> mergeAddFirst(ObjectArrayList<T> old, ObjectArrayList<T> newV) {
         old.add(newV.get(0));
         return old;
     }
@@ -283,7 +272,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * @param newV The list of elements to add to {@code old}.
      * @return {@code old}
      */
-    private static ObjectArrayList<StateSingleOutput> merge2StateArrays(ObjectArrayList<StateSingleOutput> old, ObjectArrayList<StateSingleOutput> newV) {
+    private static <T> ObjectArrayList<T> merge2AddAll(ObjectArrayList<T> old, ObjectArrayList<T> newV) {
         old.addAll(newV);
         return old;
     }
@@ -291,14 +280,14 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
     private final AtomicInteger nextNb;
 
     /**
-     * Get the next unexpanded single node {@link StateSingleOutput}. This can
-     * be called concurrently since it is based on an {@link AtomicInteger}.
+     * Get the next unexpanded single node {@link StateMultiOutput}. This can be
+     * called concurrently since it is based on an {@link AtomicInteger}.
      *
      * @param g The graph structure for context.
-     * @return The next {@link StateSingleOutput} that has to be expanded. null
-     * if there is no next {@link StateSingleOutput}.
+     * @return The next {@link StateMultiOutput} that has to be expanded. null
+     * if there is no next {@link StateMultiOutput}.
      */
-    protected StateSingleOutput getSingleState(Graph g) {
+    protected StateMultiOutput getSingleState(Graph g) {
         int currentNb = nextNb.getAndIncrement();
         if (currentNb >= g.inc.length) { //Check whether there is still a node.
             return null;
@@ -306,11 +295,12 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
         if (g.inc[currentNb].length == 0) { //in case of literal node
             return getSingleState(g);
         } else {
+            int[] outputNodes = {currentNb};
             int[] vertices = {currentNb};
             int[] expandable = g.expandable_children[currentNb];
             int[] unexpandable = g.unexpandable_children[currentNb];
 
-            return new StateSingleOutput(currentNb, vertices, expandable, unexpandable, -1);
+            return new StateMultiOutput(vertices, expandable, unexpandable, outputNodes);
         }
     }
 
@@ -361,7 +351,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
 
         Stopwatch stopwatch = null;
         expandableStates.clear();
-        EntryProfitStateCom comparator = new EntryProfitStateCom(false);
+        EntryProfitStateMOSRCom comparator = new EntryProfitStateMOSRCom(false);
 
         /* First enumeration */
         if (verbose) {
@@ -383,7 +373,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
         }
 
         /* Second enumeration */
-        Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] interestingStates = null;
+        Map.Entry<long[], ObjectArrayList<StateMultiOutput>>[] interestingStates = null;
         if (k.length > 1) {
             interestingStates = Utils.filter(expandableStates, comparator, xBest);
         }
@@ -396,7 +386,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
                 System.out.println("--------------------------------------------------------");
                 System.out.println("Iteration " + (i + 1) + " k=" + k[i]);
                 System.out.println("Expanding (occurrenceCount) code:");
-                for (Map.Entry<long[], ObjectArrayList<StateSingleOutput>> entry : interestingStates) {
+                for (Map.Entry<long[], ObjectArrayList<StateMultiOutput>> entry : interestingStates) {
                     System.out.println("(" + entry.getValue().size() + ") " + EdgeCanonical.printCode(entry.getKey()));
                 }
                 System.out.println("");
@@ -424,7 +414,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * Used by several {@link EnumSecondaryThread threads} during the heuristic
      * deepening to keep track of the states (xBest patterns) to extend.
      */
-    private Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates;
+    private Map.Entry<long[], ObjectArrayList<StateMultiOutput>>[] baseStates;
 
     /**
      * A thread that can perform the 'deepening' part of the enumeration. This
@@ -442,12 +432,12 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
     private class EnumSecondaryThread extends Thread {
 
         EnumSecondaryThread(int thread_id, AtomicInteger live_threads, Graph g, int k,
-                int maxInputs, boolean expandAfterFlag, int prevK) {
+                int maxPorts, boolean expandAfterFlag, int prevK) {
             this.thread_id = thread_id;
             this.live_threads = live_threads;
             this.g = g;
             this.k = k;
-            this.maxInputs = maxInputs;
+            this.maxPorts = maxPorts;
             this.expandAfterFlag = expandAfterFlag;
             this.prevK = prevK;
         }
@@ -455,7 +445,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
         final int thread_id;
         final AtomicInteger live_threads;
         Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> subPatterns;
-        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateSingleOutput>> subExpandableStates;
+        Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<StateMultiOutput>> subExpandableStates;
         final boolean expandAfterFlag;
         final int prevK;
 
@@ -466,7 +456,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
 
         Graph g;
         int k;
-        int maxInputs;
+        int maxPorts;
 
         @Override
         public void run() {
@@ -490,7 +480,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
 
             currChunkIndex = startIndex[0];
             chunkEndIndex = startIndex[0] + chunkSize[0] + 1;
-            subPatterns = enumerate_aux(g, maxInputs);
+            subPatterns = enumerate_aux(g, maxPorts);
 
             System.out.printf("Thread %d finished. Found patterns: %d. %d threads remaining.\n", thread_id, subPatterns.size(), live_threads.decrementAndGet());
         }
@@ -504,8 +494,8 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
          * @param g The backend graph to search in.
          * @param k The maximum pattern size, equal to the amount of internal
          * nodes. When this number is reached, extension is stopped.
-         * @param maxInputs The maximum amount of inputs that an occurrence
-         * ({link State}) may have.
+         * @param maxPorts The maximum amount of ports that an occurrence ({link
+         * State}) may have.
          * @param expandAfterFlag Denotes whether the enumerator should keep
          * track of the expandableStates. When set to true, a list of expandable
          * occurrences is kept such that they can later be retrieved
@@ -515,22 +505,22 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
          * @return Mapping of pattern -> list of the roots of the found
          * occurrences of that pattern.
          */
-        public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate_aux(Graph g, int maxInputs) {
+        public Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> enumerate_aux(Graph g, int maxPorts) {
             entryIndex = 0;
             currChunkIndex = 0;
             chunkEndIndex = 0;
             this.subExpandableStates = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
 
             Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns = new Object2ObjectOpenCustomHashMap<>(new ArrayLongHashStrategy());
-            StateSingleOutput base;
+            StateMultiOutput base;
 
-            ArrayDeque<StateSingleOutput> stack = new ArrayDeque<>();
+            ArrayDeque<StateMultiOutput> stack = new ArrayDeque<>();
             ArrayDeque<Integer> indexStack = new ArrayDeque<>();
             while ((base = getBaseState()) != null) {
                 stack.push(base);
                 indexStack.push(0);
                 while (!stack.isEmpty()) {
-                    StateSingleOutput c_state = stack.peek();
+                    StateMultiOutput c_state = stack.peek();
                     int expandIndex = indexStack.pop();
 
                     if (c_state.expandable.length <= expandIndex) {
@@ -539,17 +529,17 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
                     } else {
                         /* Continue expanding */
                         indexStack.push(expandIndex + 1);
-                        StateSingleOutput expanded = c_state.expand(g, expandIndex);
+                        StateMultiOutput expanded = c_state.expand(g, expandIndex);
                         CodeOccResult codeOcc = null;
 
-                        if (expanded.vertices.length > prevK && expanded.interNode == -1
-                                && expanded.expandable.length + expanded.unexpandable.length <= maxInputs) { //Count #Inputs (excl literals)
+                        if (expanded.vertices.length > prevK
+                                && expanded.outputNodes.length + expanded.expandable.length + expanded.unexpandable.length <= maxPorts) { //Count #Inputs (excl literals)
                             /* Pattern occurrence count */
                             codeOcc = expanded.getCodeOcc(g);
-                            if (codeOcc.inputCount <= maxInputs) { //Count #Inputs (incl literals)
+                            if (codeOcc.inputCount + expanded.vertices.length <= maxPorts) { //Count #Inputs (incl literals) + #outputs
                                 ObjectArrayList<int[]> singleObj = new ObjectArrayList<>();
                                 singleObj.add(codeOcc.lastVerticesOrdered); //vertices of expanded sorted in assigned order.
-                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> MultiBackTrackEnumerator.mergeArray(v1, v2));
+                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> MultiBackTrackEnumeratorMOSR.mergeAddFirst(v1, v2));
                             }
                         }
 
@@ -560,7 +550,7 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
                         }
                         if (expandAfterFlag && codeOcc != null && expanded.vertices.length > prevK) {
                             //Note: This excludes current invalid occurrences (intermediate output / maxInputs)
-                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new com.vincentderk.acircuitminer.miner.StateSingleOutput[]{expanded}), (v1, v2) -> mergeStateArrays(v1, v2));
+                            subExpandableStates.merge(codeOcc.code, new ObjectArrayList(new StateMultiOutput[]{expanded}), (v1, v2) -> mergeAddFirst(v1, v2));
                         }
 
                     }
@@ -576,10 +566,10 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
         /**
          * Get the next unexpanded base state.
          *
-         * @return The next State that has to be expanded. null if there is no
-         * more next State.
+         * @return The next {@link State} that has to be expanded. null if there
+         * is no more next {@link State}.
          */
-        public StateSingleOutput getBaseState() {
+        public StateMultiOutput getBaseState() {
             currChunkIndex++;
 
             if (currChunkIndex >= chunkEndIndex) {
@@ -613,20 +603,19 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
      * found occurrences to the patternsMap.
      */
     protected void expandSelectedPatterns(Graph g, Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patternsMap,
-            Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] baseStates, int k,
+            Map.Entry<long[], ObjectArrayList<StateMultiOutput>>[] baseStates, int k,
             int maxPorts, boolean expandAfterFlag, int prevK) {
-        final int maxInputs = maxPorts;
         this.baseStates = baseStates;
 
         if (baseStates.length == 0) {
             System.out.println("No base states to expand!");
         } else {
-            MultiBackTrackEnumerator.EnumSecondaryThread[] threads = new EnumSecondaryThread[THREAD_COUNT];
+            MultiBackTrackEnumeratorMOSR.EnumSecondaryThread[] threads = new EnumSecondaryThread[THREAD_COUNT];
             final AtomicInteger live_threads = new AtomicInteger(THREAD_COUNT);
 
             for (int i = 0; i < THREAD_COUNT; i++) {
                 final int thread_id = i + 1;
-                threads[i] = new EnumSecondaryThread(thread_id, live_threads, g, k, maxInputs, expandAfterFlag, prevK);
+                threads[i] = new EnumSecondaryThread(thread_id, live_threads, g, k, maxPorts, expandAfterFlag, prevK);
             }
 
             for (int i = 0; i < THREAD_COUNT; i++) {
@@ -652,27 +641,15 @@ public class MultiBackTrackEnumerator implements ExpandableEnumerator {
     private void merge(EnumSecondaryThread[] threads, Object2ObjectOpenCustomHashMap<long[], ObjectArrayList<int[]>> patterns) {
         for (EnumSecondaryThread thread : threads) {
             for (Object2ObjectMap.Entry<long[], ObjectArrayList<int[]>> p : Object2ObjectMaps.fastIterable(thread.subPatterns)) {
-                patterns.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2Arrays(v1, v2));
+                patterns.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2AddAll(v1, v2));
             }
         }
 
         for (EnumSecondaryThread thread : threads) {
-            for (Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> p : Object2ObjectMaps.fastIterable(thread.subExpandableStates)) {
-                expandableStates.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2StateArrays(v1, v2));
+            for (Object2ObjectMap.Entry<long[], ObjectArrayList<StateMultiOutput>> p : Object2ObjectMaps.fastIterable(thread.subExpandableStates)) {
+                expandableStates.merge(p.getKey(), p.getValue(), (v1, v2) -> merge2AddAll(v1, v2));
             }
         }
-    }
-
-    /**
-     * Adds the first element of newV to old.
-     *
-     * @param old The list to add an element to.
-     * @param newV A list of which to get the first element.
-     * @return {@code old}
-     */
-    private static ObjectArrayList<int[]> mergeArray(ObjectArrayList<int[]> old, ObjectArrayList<int[]> newV) {
-        old.add(newV.get(0));
-        return old;
     }
 
 }

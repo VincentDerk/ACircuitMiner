@@ -4,9 +4,9 @@ import com.vincentderk.acircuitminer.miner.util.Utils;
 import com.google.common.base.Stopwatch;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.Miner;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitCom;
-import static com.vincentderk.acircuitminer.miner.util.Utils.patternProfit;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import com.vincentderk.acircuitminer.miner.util.OperationUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -24,6 +24,9 @@ import java.util.stream.Stream;
 /**
  * Finds the best pattern (not accounting for emulation) of size 2..30, replaces
  * the occurrences and writes both the pattern and the resulting new AC to file.
+ * 
+ * <p>
+ * Focuses on Single Output Single Root ({@link SOSR}) patterns.
  *
  * @author Vincent Derkinderen
  * @version 2.0
@@ -88,7 +91,7 @@ public class ExperimentReplaceAlarm {
             System.out.println("Replacing " + EdgeCanonical.printCode(best.getKey()) + " with " + best.getValue().size() + " occurrences.");
             Graph gNew = g.clone();
             IntArrayList ignore = OperationUtils.replace(gNew, best.getKey(), best.getValue(), (short) 3);
-            System.out.println("Estimated savings of " + patternProfit(best.getKey(), best.getValue()));
+            System.out.println("Estimated savings of " + SOSR.patternProfit(best.getKey(), best.getValue()));
             System.out.printf("Replaced best in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
             //Write
@@ -107,7 +110,7 @@ public class ExperimentReplaceAlarm {
 
             //Write pattern
             stopwatch.reset().start();
-            Graph patternGraph = OperationUtils.codeToGraph(best.getKey());
+            Graph patternGraph = Graph.codeToGraph(best.getKey());
             String patternPath = basePath + "alarmResults//" + ac + "Pattern" + i + ".net.ac";
             writer = new FileWriter(patternPath);
             OperationUtils.writePatternGraph(writer, patternGraph, new IntArrayList(), symbols);

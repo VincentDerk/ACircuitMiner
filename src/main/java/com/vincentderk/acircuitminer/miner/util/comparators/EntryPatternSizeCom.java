@@ -1,6 +1,6 @@
 package com.vincentderk.acircuitminer.miner.util.comparators;
 
-import com.vincentderk.acircuitminer.miner.util.Utils;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Comparator;
 import java.util.Map;
@@ -8,6 +8,9 @@ import java.util.Map;
 /**
  * Comparator to sort based on the amount of internal operation nodes each
  * pattern has.
+ * <br>To determine the amount of internal operation nodes,
+ * {@link SOSR#getOperationNodeCount(long[])} is used when there is no
+ * occurrence of that pattern (empty {@code ObjectArrayList}).
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -40,13 +43,13 @@ public class EntryPatternSizeCom implements Comparator<Map.Entry<long[], ObjectA
         long o2Value;
 
         if (o1.getValue().isEmpty()) {
-            o1Value = Utils.operationNodeCount(o1.getKey());
+            o1Value = SOSR.getOperationNodeCount(o1.getKey());
         } else {
             o1Value = o1.getValue().get(0).length;
         }
 
         if (o2.getValue().isEmpty()) {
-            o2Value = Utils.operationNodeCount(o2.getKey());
+            o2Value = SOSR.getOperationNodeCount(o2.getKey());
         } else {
             o2Value = o2.getValue().get(0).length;
         }

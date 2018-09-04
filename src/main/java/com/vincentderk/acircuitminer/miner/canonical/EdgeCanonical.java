@@ -164,9 +164,9 @@ public class EdgeCanonical {
      * This is done for each element and appended in that order.
      *
      * @throws IllegalArgumentException if there is an operation that it does
-     * not cover. Only
-     * {@link Graph#SUM}, {@link Graph#PRODUCT}, {@link Graph#INPUT} are
-     * allowed.
+     * not cover. Only {@link Graph#SUM}, {@link Graph#SUM_OUTPUT},
+     * {@link Graph#PRODUCT}, {@link Graph#PRODUCT_OUTPUT} and
+     * {@link Graph#INPUT} are allowed.
      */
     public static String printCode(long[] code) {
         StringBuilder builder = new StringBuilder();
@@ -182,9 +182,11 @@ public class EdgeCanonical {
                 short label = (short) (Long.MAX_VALUE - l);
 
                 switch (label) {
+                    case Graph.PRODUCT_OUTPUT:
                     case Graph.PRODUCT:
                         builder.append("*");
                         break;
+                    case Graph.SUM_OUTPUT:
                     case Graph.SUM:
                         builder.append("+");
                         break;

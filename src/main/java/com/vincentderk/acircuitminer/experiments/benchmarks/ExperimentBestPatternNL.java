@@ -4,6 +4,7 @@ import com.vincentderk.acircuitminer.miner.util.Utils;
 import com.google.common.base.Stopwatch;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.Miner;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryPatternSizeCom;
@@ -38,6 +39,8 @@ import java.util.stream.Stream;
  * retrieved and stored as a set. This results in all the patterns we can
  * emulate when every node can perform both + and *. The rest of the algorithm
  * proceeds as before.
+ * <p>
+ * Focuses on Single Output Single Root ({@link SOSR}) patterns.
  *
  * @author Vincent Derkinderen
  * @version 2.0
@@ -67,7 +70,7 @@ public class ExperimentBestPatternNL {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Graph g = Utils.readACStructure(new FileReader(path));
         System.out.printf("Graph loaded in %s msecs.\n", stopwatch.elapsed(TimeUnit.MILLISECONDS));
-        long totalGraphCost = OperationUtils.getTotalCosts(g);
+        long totalGraphCost = g.getTotalCosts();
 
         // Find patterns
         stopwatch.reset().start();
@@ -84,14 +87,14 @@ public class ExperimentBestPatternNL {
         System.out.printf("Finished replace-plan for each pattern in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         // -- Debug --
-        double opNodeCount = Utils.operationNodeCount(g);
+        double opNodeCount = g.getOperationNodeCount();
         System.out.println("");
         System.out.println("Amount of arithmetic nodes in AC: " + opNodeCount);
         System.out.println("Used format: - (<operation count of pattern>|<coverage of AC>%) <occurrence count> of <pattern>");
         DecimalFormat dec = new DecimalFormat("#0.000");
         for (Entry<long[], UseBlock> entry : patternUseBlocks) {
-            int opCountOfP = Utils.operationNodeCount(entry.getKey());
-            int inputCountOfP = Utils.nodeCount(entry.getKey()) - opCountOfP;
+            int opCountOfP = SOSR.getOperationNodeCount(entry.getKey());
+            int inputCountOfP = SOSR.getNodeCount(entry.getKey()) - opCountOfP;
             double relativeSavings = entry.getValue().profit / totalGraphCost * 100;
             System.out.println("");
             System.out.println("Pattern: " + EdgeCanonical.printCode(entry.getKey()));
@@ -104,7 +107,7 @@ public class ExperimentBestPatternNL {
 
             int occCount0 = usedOccurrences.get(0).size();
             String code0 = EdgeCanonical.printCode(entry.getValue().patternP);
-            int opCountPerOcc0 = Utils.operationNodeCount(entry.getValue().patternP);
+            int opCountPerOcc0 = SOSR.getOperationNodeCount(entry.getValue().patternP);
             int nodeCount0 = opCountPerOcc0 * occCount0;
             totalNodeCount += nodeCount0;
             double relNodeCount0 = (nodeCount0 / opNodeCount) * 100;
@@ -114,7 +117,7 @@ public class ExperimentBestPatternNL {
             for (int i = 0; i < usedPatterns.length; i++) {
                 int occCount = usedOccurrences.get(i + 1).size();
                 String code = EdgeCanonical.printCode(usedPatterns[i].emulatedCode);
-                int opCountPerOcc = Utils.operationNodeCount(usedPatterns[i].emulatedCode);
+                int opCountPerOcc = SOSR.getOperationNodeCount(usedPatterns[i].emulatedCode);
                 int nodeCount = opCountPerOcc * occCount;
                 totalNodeCount += nodeCount;
                 double relNodeCount = (nodeCount / opNodeCount) * 100;
@@ -170,10 +173,10 @@ public class ExperimentBestPatternNL {
      * obtain all patterns that are emulatable by P. Since the nodes of P can do
      * both + and *, the emulatable patterns are obtained by calling
      * {@link NeutralFinder} for each possible combination of + and *. The
-     * occurrences of all these emulatable patterns can also be replaced, keeping in
-     * mind the overlap. More specifically, the next emulatable pattern is
-     * chosen on a biggest-first basis. The occurrences of the chosen pattern
-     * are picked on a first-come, first-served principal. All the usage
+     * occurrences of all these emulatable patterns can also be replaced,
+     * keeping in mind the overlap. More specifically, the next emulatable
+     * pattern is chosen on a biggest-first basis. The occurrences of the chosen
+     * pattern are picked on a first-come, first-served principal. All the usage
      * information is returned as part of a {@link UseBlock}.
      *
      * @param patternEntry An entry of a pattern and its occurrences
@@ -207,7 +210,7 @@ public class ExperimentBestPatternNL {
         for (Map.Entry<long[], EmulatableBlock> pEntry : emulatablePatterns.entrySet()) {
             long[] p = pEntry.getKey();
             ObjectArrayList<int[]> pOcc = patternsAll.get(p);
-            if (pOcc != null && Utils.patternOccurrenceCost(p, 1) > Utils.patternBlockCost(pEntry.getValue(), 1)) {
+            if (pOcc != null && SOSR.patternOccurrenceCost(p, 1) > SOSR.patternBlockCost(pEntry.getValue(), 1)) {
                 patternsOfInterest.put(p, pOcc);
             }
         }

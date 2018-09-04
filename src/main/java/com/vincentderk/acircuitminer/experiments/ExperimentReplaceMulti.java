@@ -4,9 +4,9 @@ import com.vincentderk.acircuitminer.miner.util.Utils;
 import com.google.common.base.Stopwatch;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.Miner;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitCom;
-import static com.vincentderk.acircuitminer.miner.util.Utils.patternProfit;
 import com.vincentderk.acircuitminer.miner.util.OperationUtils;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -23,6 +23,9 @@ import java.util.stream.Stream;
  * Performs the enumeration algorithm to find the best pattern (not accounting
  * for emulation). It replaces the occurrences of that pattern and repeats to
  * find the next best pattern until no occurrences are left that do not overlap.
+ * 
+ * <p>
+ * Focuses on Single Output Single Root ({@link SOSR}) patterns.
  *
  * @author Vincent Derkinderen
  * @version 2.0
@@ -102,7 +105,7 @@ public class ExperimentReplaceMulti {
             stopwatch.reset().start();
             System.out.println("Replacing " + EdgeCanonical.printCode(pattern) + " with " + occurrences.size() + " occurrences.");
             IntArrayList ignore = OperationUtils.replace(g, pattern, occurrences, nextOpId);
-            System.out.println("Estimated savings of " + patternProfit(best.getKey(), best.getValue()));
+            System.out.println("Estimated savings of " + SOSR.patternProfit(best.getKey(), best.getValue()));
             System.out.printf("Replaced in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
             ignoreList.addAll(ignore);
 

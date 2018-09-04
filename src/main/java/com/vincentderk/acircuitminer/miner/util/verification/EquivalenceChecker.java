@@ -179,8 +179,8 @@ public class EquivalenceChecker {
         Graph patternGraph;
         int[] patternInputNodes;
         if (pattern == null) {
-            patternGraph = OperationUtils.codeToGraph(code);
-            patternInputNodes = Utils.getInputNodes(patternGraph);
+            patternGraph = Graph.codeToGraph(code);
+            patternInputNodes = patternGraph.getInputNodes();
             byte[] nodeValue = propagateUp(patternGraph, input, patternInputNodes);
             //patternInputNodes[x] = y; the node that was given by patternInputNodes[x] is now y.
             //patternInputNodes[x] = -1 is a removal of that node.

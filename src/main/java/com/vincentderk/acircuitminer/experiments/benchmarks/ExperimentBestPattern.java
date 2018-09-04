@@ -4,6 +4,7 @@ import com.vincentderk.acircuitminer.miner.util.Utils;
 import com.google.common.base.Stopwatch;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.Miner;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
 import com.vincentderk.acircuitminer.miner.util.comparators.EntryPatternSizeCom;
@@ -27,9 +28,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
- * Experiment to find the best pattern taking into account the patterns
- * that are emulatable by using 0 or 1 as input.
- * 
+ * Experiment to find the best pattern taking into account the patterns that are
+ * emulatable by using 0 or 1 as input.
+ * <p>
+ * Focuses on Single Output Single Root ({@link SOSR}) patterns.
+ *
  * <p>
  * <u>Algorithm:</u>
  * <ul>
@@ -67,7 +70,7 @@ public class ExperimentBestPattern {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Graph g = Utils.readACStructure(new FileReader(path));
         System.out.printf("Graph loaded in %s msecs.\n", stopwatch.elapsed(TimeUnit.MILLISECONDS));
-        long totalGraphCost = OperationUtils.getTotalCosts(g);
+        long totalGraphCost = g.getTotalCosts();
 
         // Find patterns
         stopwatch.reset().start();
@@ -84,14 +87,14 @@ public class ExperimentBestPattern {
         System.out.printf("Finished replace-plan for each pattern in %s secs.\n", stopwatch.elapsed(TimeUnit.SECONDS));
 
         // -- Debug, pattern usage -- 
-        double opNodeCount = Utils.operationNodeCount(g);
+        double opNodeCount = g.getOperationNodeCount();
         System.out.println("");
         System.out.println("Amount of arithmetic nodes in AC: " + opNodeCount);
         System.out.println("Used format: - (<operation count of pattern>|<coverage of AC>%) <occurrence count> of <pattern>");
         DecimalFormat dec = new DecimalFormat("#0.000");
         for (Entry<long[], UseBlock> entry : patternUseBlocks) {
-            int opCountOfP = Utils.operationNodeCount(entry.getKey());
-            int inputCountOfP = Utils.nodeCount(entry.getKey()) - opCountOfP;
+            int opCountOfP = SOSR.getOperationNodeCount(entry.getKey());
+            int inputCountOfP = SOSR.getNodeCount(entry.getKey()) - opCountOfP;
             double relativeSavings = entry.getValue().profit / totalGraphCost * 100;
             System.out.println("");
             System.out.println("Pattern: " + EdgeCanonical.printCode(entry.getKey()));
@@ -105,7 +108,7 @@ public class ExperimentBestPattern {
 
             int occCount0 = usedOccurrences.get(0).size();
             String code0 = EdgeCanonical.printCode(entry.getValue().patternP);
-            int opCountPerOcc0 = Utils.operationNodeCount(entry.getValue().patternP);
+            int opCountPerOcc0 = SOSR.getOperationNodeCount(entry.getValue().patternP);
             int nodeCount0 = opCountPerOcc0 * occCount0;
             totalNodeCount += nodeCount0;
             double relNodeCount0 = (nodeCount0 / opNodeCount) * 100;
@@ -115,7 +118,7 @@ public class ExperimentBestPattern {
             for (int i = 0; i < usedPatterns.length; i++) {
                 int occCount = usedOccurrences.get(i + 1).size();
                 String code = EdgeCanonical.printCode(usedPatterns[i].emulatedCode);
-                int opCountPerOcc = Utils.operationNodeCount(usedPatterns[i].emulatedCode);
+                int opCountPerOcc = SOSR.getOperationNodeCount(usedPatterns[i].emulatedCode);
                 int nodeCount = opCountPerOcc * occCount;
                 totalNodeCount += nodeCount;
                 double relNodeCount = (nodeCount / opNodeCount) * 100;
@@ -207,7 +210,7 @@ public class ExperimentBestPattern {
         for (Map.Entry<long[], EmulatableBlock> pEntry : emulatablePatterns.entrySet()) {
             long[] p = pEntry.getKey();
             ObjectArrayList<int[]> pOcc = patternsAll.get(p);
-            if (pOcc != null && Utils.patternOccurrenceCost(p, 1) > Utils.patternBlockCost(pEntry.getValue(), 1)) {
+            if (pOcc != null && SOSR.patternOccurrenceCost(p, 1) > SOSR.patternBlockCost(pEntry.getValue(), 1)) {
                 patternsOfInterest.put(p, pOcc);
             }
         }

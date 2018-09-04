@@ -300,7 +300,21 @@ public class CanonicalStateMultiOutput implements Comparable<CanonicalStateMulti
         }
 
         //Label in the code
-        extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        if (Arrays.binarySearch(state.outputNodes, node) >= 0) {
+            //output node
+            switch (g.label[node]) {
+                case Graph.SUM:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.SUM_OUTPUT;
+                    break;
+                case Graph.PRODUCT:
+                    extra[extra.length - 1] = Long.MAX_VALUE - Graph.PRODUCT_OUTPUT;
+                    break;
+                default:
+                    extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+            }
+        } else {
+            extra[extra.length - 1] = Long.MAX_VALUE - g.label[node];
+        }
         this.code = extra;
 
         //Start of the new extension list. Except for the Not yet assigned but 

@@ -1,6 +1,6 @@
 package com.vincentderk.acircuitminer.miner.util.comparators;
 
-import com.vincentderk.acircuitminer.miner.util.Utils;
+import com.vincentderk.acircuitminer.miner.SOSR;
 import com.vincentderk.acircuitminer.miner.emulatable.neutralfinder.EmulatableBlock;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,6 +10,10 @@ import java.util.Map;
 /**
  * Comparator to sort based on the savings of both patterns based on their
  * {@link EmulatableBlock} given to the constructor.
+ *
+ * <p>
+ * This uses {@link SOSR#patternOccurrenceCost(long[], int)} and
+ * {@link SOSR#patternBlockCost(EmulatableBlock, int)} to determine the savings.
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -52,8 +56,8 @@ public class EntryDynCostCom implements Comparator<Map.Entry<long[], ObjectArray
         long[] o2Pattern = o2.getKey();
         EmulatableBlock o2EmulatedBlock = emulatablePatterns.get(o2Pattern);
 
-        double o1CompressProfit = (Utils.patternOccurrenceCost(o1Pattern, 1) - Utils.patternBlockCost(o1EmulatedBlock, 1)) * o1.getValue().size();
-        double o2CompressProfit = (Utils.patternOccurrenceCost(o2Pattern, 1) - Utils.patternBlockCost(o2EmulatedBlock, 1)) * o2.getValue().size();
+        double o1CompressProfit = (SOSR.patternOccurrenceCost(o1Pattern, 1) - SOSR.patternBlockCost(o1EmulatedBlock, 1)) * o1.getValue().size();
+        double o2CompressProfit = (SOSR.patternOccurrenceCost(o2Pattern, 1) - SOSR.patternBlockCost(o2EmulatedBlock, 1)) * o2.getValue().size();
         return (lowToHigh) ? Double.compare(o1CompressProfit, o2CompressProfit) : Double.compare(o2CompressProfit, o1CompressProfit);
     }
 }

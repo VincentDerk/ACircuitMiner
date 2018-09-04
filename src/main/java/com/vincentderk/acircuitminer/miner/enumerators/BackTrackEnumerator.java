@@ -9,6 +9,7 @@ import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import com.vincentderk.acircuitminer.miner.util.Misc;
 import com.vincentderk.acircuitminer.miner.util.Utils;
+import com.vincentderk.acircuitminer.miner.util.comparators.EntryProfitStateCom;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayDeque;
@@ -16,7 +17,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
  * An enumerator that finds {@link StateSingleOutput} occurrences with only one
  * output and a maximum amount of inputs. (<b>Enumeration,
  * {@link #enumerate(com.vincentderk.acircuitminer.miner.Graph, int, int) enumerate}</b>)
@@ -205,7 +205,8 @@ public class BackTrackEnumerator implements ExpandableEnumerator {
      * Used by
      * {@link #getBaseState(java.util.Map.Entry<long[],it.unimi.dsi.fastutil.objects.ObjectArrayList<StateSingleOutput>>[])}
      * to keep track of the next pattern to expand.
-     * <p>
+     * <
+     * p>
      * <b>Initially, before expanding, this value should/will be set to 0.</b>
      */
     protected int nextNb;
@@ -289,6 +290,7 @@ public class BackTrackEnumerator implements ExpandableEnumerator {
 
         Stopwatch stopwatch = null;
         expandableStates.clear();
+        EntryProfitStateCom comparator = new EntryProfitStateCom(false);
 
         /* First enumeration */
         if (verbose) {
@@ -312,7 +314,7 @@ public class BackTrackEnumerator implements ExpandableEnumerator {
         /* Second enumeration */
         Map.Entry<long[], ObjectArrayList<StateSingleOutput>>[] interestingStates = null;
         if (k.length > 1) {
-            interestingStates = Utils.filter(expandableStates, xBest);
+            interestingStates = Utils.filter(expandableStates, comparator, xBest);
         }
 
         for (int i = 1; i < k.length; i++) {
@@ -340,7 +342,7 @@ public class BackTrackEnumerator implements ExpandableEnumerator {
             }
 
             if (i + 1 < k.length) {
-                interestingStates = Utils.filter(getExpandableStates(), xBest);
+                interestingStates = Utils.filter(getExpandableStates(), comparator, xBest);
             }
         }
 
@@ -348,10 +350,10 @@ public class BackTrackEnumerator implements ExpandableEnumerator {
     }
 
     /**
-     * Extend the patternsMap by extending the occurrences of the
-     * baseStates. Both {@link patternsMap} and {@link baseStates} will
-     * be modified, as well as class fields
-     * {@link nextNb}, {@link nextPattern} and {@link expandableStates}.
+     * Extend the patternsMap by extending the occurrences of the baseStates.
+     * Both {@link patternsMap} and {@link baseStates} will be modified, as well
+     * as class fields {@link nextNb}, {@link nextPattern} and
+     * {@link expandableStates}.
      *
      * @param g The backend graph to expand in.
      * @param patternsMap The map of patterns to extend to. Will be modified.
