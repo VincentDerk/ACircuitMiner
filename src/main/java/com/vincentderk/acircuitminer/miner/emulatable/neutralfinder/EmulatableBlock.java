@@ -4,9 +4,19 @@ import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
 import java.util.Arrays;
 
 /**
- * Data structure that holds information regarding an emulation. When a pattern
- * P emulates another pattern, this can store: the emulated code, the input for
- * that emulation, which nodes in P were active, ...
+ * Data structure that holds information regarding an emulation.
+ * <p>
+ * When a pattern P emulates another pattern, this can store:
+ * <ul>
+ * <li>The emulated code,</li>
+ * <li>The input required for that emulation,</li>
+ * <li>Which nodes in P were/are active during the emulation,</li>
+ * <li>...</li>
+ * </ul>
+ *
+ * <p>
+ * Note: only the emulation information is stored. P, which is used to emulate,
+ * is not.
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -27,13 +37,14 @@ public class EmulatableBlock {
     /**
      * This provides the link between the inputs given to an emulated pattern
      * and the order of those inputs in the actual input given to the pattern P.
+     * <p>
      * For example: There might be an occurrence whose input nodes to the
      * emulated pattern are in order: 5,10,8. To emulate this pattern, let us
-     * say the input is 120202. Which 2 the 5,10 and 8 are is embedded in this
-     * array. So {@code emulatedIndexToActualInputIndex[0]} represents the index
-     * of the input in the pattern that corresponds to the first input of the
-     * emulated pattern. In our example, this might be 1,3 or 5, the indices of the 2's in the actual
-     * input 120202.
+     * say the input is {@code 120202}. Which {@code 2} the 5, 10 and 8 are, is
+     * embedded in this array. So {@code emulatedIndexToActualInputIndex[0]}
+     * represents the index of the input in the pattern that corresponds to the
+     * first input of the emulated pattern. In our example this might be 1,3 or
+     * 5, the indices of the {@code 2}'s in the actual input {@code 120202}.
      */
     public int[] emulatedIndexToActualInputIndex;
 
