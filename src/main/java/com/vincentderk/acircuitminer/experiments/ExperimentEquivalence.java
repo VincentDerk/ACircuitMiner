@@ -55,8 +55,8 @@ public class ExperimentEquivalence {
     public static void main(String[] args) throws FileNotFoundException, IOException {
         System.out.println("Running ExperimentEquivalence");
         boolean verbose = false;
-        String basePath = "D://Thesis//Nets Benchmark//";
-        String ac = "alarm";
+        String basePath = "D://Thesis//Nets//";
+        String ac = "small_asia";
         String path = basePath + ac + ".net.ac";
         int[] k = {9};
         int maxPorts = 16;

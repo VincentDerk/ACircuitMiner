@@ -196,8 +196,10 @@ public class NeutralState {
         //Currently only check when all children have a value and propagates the value up.
         switch (g.label[parentNode]) {
             case Graph.PRODUCT: // *
+            case Graph.PRODUCT_OUTPUT: // root *
                 return checkParentAndItsChildren_auxMulti(parentNode, originChildNode, newValue);
             case Graph.SUM: //+
+            case Graph.SUM_OUTPUT: // root +
                 return checkParentAndItsChildren_auxPlus(parentNode, originChildNode, newValue);
             default:
                 throw new IllegalArgumentException("Warning: found an operation different than * and + while calculating neutral state.");

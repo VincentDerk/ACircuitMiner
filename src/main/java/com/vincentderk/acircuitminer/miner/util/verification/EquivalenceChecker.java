@@ -409,9 +409,11 @@ public class EquivalenceChecker {
                     //Fix the nodeValue and connection (Passing on = node bridged over)
                     switch (g.label[currentNodeIndex]) {
                         case Graph.SUM:
+                        case Graph.SUM_OUTPUT:
                             propagateUp_auxSum(g, currentNodeIndex, nodeValue);
                             break;
                         case Graph.PRODUCT:
+                        case Graph.PRODUCT_OUTPUT:
                             propagateUp_auxProduct(g, currentNodeIndex, nodeValue);
                             break;
                         default:
