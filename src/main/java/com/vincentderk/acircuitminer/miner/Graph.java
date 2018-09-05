@@ -54,7 +54,7 @@ public class Graph {
     //The label in the code should be greater than (node1 << 32 | node2).
     //nodes depend on k, we could take a maximum of 10 * k.
     /**
-     * Holds the labels for AC nodes. * = PRODUCT, + = SUM, input = INPUT.
+     * Holds the labels for AC nodes. * = {@link PRODUCT}, + = {@link SUM}, input = {@link INPUT}.
      */
     public short[] label;
 
