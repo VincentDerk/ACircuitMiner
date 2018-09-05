@@ -3,6 +3,7 @@ package com.vincentderk.acircuitminer.miner.util.verification;
 import com.vincentderk.acircuitminer.miner.Graph;
 import com.vincentderk.acircuitminer.miner.canonical.CodeOccResult;
 import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonical;
+import com.vincentderk.acircuitminer.miner.canonical.EdgeCanonicalMultiOutput;
 import com.vincentderk.acircuitminer.miner.util.ArrayLongHashStrategy;
 import com.vincentderk.acircuitminer.miner.util.ArrayByteHashStrategy;
 import com.vincentderk.acircuitminer.miner.util.OperationUtils;
@@ -25,6 +26,9 @@ import java.util.Map;
  * performed correctly. This can provide extra guarantees on the correctness
  * that the functionality of the graph is equivalent before and after
  * replacement.
+ *
+ * <p>
+ * This only works with {@link SOSR} (Single Output Single Root) graphs.
  *
  * @author Vincent Derkinderen
  * @version 1.0
@@ -65,6 +69,9 @@ public class EquivalenceChecker {
         Object2ObjectOpenCustomHashMap<long[], Map<byte[], Entry<Graph, int[]>>> memoizationPatternMap
                 = new Object2ObjectOpenCustomHashMap(new ArrayLongHashStrategy());
 
+        //Remove OUTPUT from pattern labels.
+        patternMap.replaceAll((id, p) -> replaceOutputLabels(p));
+
         //Unpack
         unpack(og, patternMap, memoizationPatternMap);
         unpack(rg, patternMap, memoizationPatternMap);
@@ -75,12 +82,34 @@ public class EquivalenceChecker {
 
         boolean equalStructure = Arrays.equals(ogCodeResult.code, rgCodeResult.code);
         if (!equalStructure) {
-            System.out.println("og: " + EdgeCanonical.printCode(ogCodeResult.code));
-            System.out.println("rg: " + EdgeCanonical.printCode(rgCodeResult.code));
+            System.out.println("og: " + EdgeCanonicalMultiOutput.printCode(ogCodeResult.code));
+            System.out.println("rg: " + EdgeCanonicalMultiOutput.printCode(rgCodeResult.code));
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Replace the output labels present in the given pattern with their
+     * non-output version. This modification is not in-place.
+     *
+     * @param pattern The pattern to get a replaced copy of.
+     * @return A copy of the given pattern with all OUTPUT labels replaced (e.g.
+     * {@link Graph#PRODUCT_OUTPUT} becomes {@link Graph#PRODUCT}).
+     */
+    private long[] replaceOutputLabels(long[] pattern) {
+        long[] newPattern = new long[pattern.length];
+        for (int i = 0; i < pattern.length; i++) {
+            if (pattern[i] == Long.MAX_VALUE - Graph.PRODUCT_OUTPUT) {
+                newPattern[i] = Long.MAX_VALUE - Graph.PRODUCT;
+            } else if (pattern[i] == Long.MAX_VALUE - Graph.SUM_OUTPUT) {
+                newPattern[i] = Long.MAX_VALUE - Graph.SUM;
+            } else {
+                newPattern[i] = pattern[i];
+            }
+        }
+        return newPattern;
     }
 
     /**
@@ -93,9 +122,9 @@ public class EquivalenceChecker {
      * appropriate connections are changed to connect to the nodes of that
      * graph.
      * <p>
-     * Note: only {@code g.inc, g.out and g.label} are updated/unpacked.
-     * Some notes will be marked with the operation {@link Graph#MARKER}, these
-     * are dangling nodes that have no function anymore.
+     * Note: only {@code g.inc, g.out and g.label} are updated/unpacked. Some
+     * notes will be marked with the operation {@link Graph#MARKER}, these are
+     * dangling nodes that have no function anymore.
      *
      * @param g The graph to unpack
      * @param patternMap A mapping from the label ({@code g.label}) of an
@@ -115,7 +144,9 @@ public class EquivalenceChecker {
             short opId = g.label[i];
             switch (opId) {
                 case Graph.PRODUCT:
+                case Graph.PRODUCT_OUTPUT:
                 case Graph.SUM:
+                case Graph.SUM_OUTPUT:
                 case Graph.INPUT:
                 case Graph.MARKER:
                     break;
@@ -140,15 +171,15 @@ public class EquivalenceChecker {
      * Auxiliary method of
      * {@link #unpack(Graph, AbstractShort2ObjectSortedMap, Object2ObjectOpenCustomHashMap)}.
      *
-     * Unpacks the given node ({@code currentNodeIndex}) into its
-     * decomposed operations. It does this by creating a graph of the pattern
-     * that code is emulating. That graph is added 'behind' g (index-wise) and
-     * the appropriate connections are changed to connect to the nodes of that
+     * Unpacks the given node ({@code currentNodeIndex}) into its decomposed
+     * operations. It does this by creating a graph of the pattern that code is
+     * emulating. That graph is added 'behind' g (index-wise) and the
+     * appropriate connections are changed to connect to the nodes of that
      * graph.
      * <p>
-     * Note: only {@code g.inc, g.out and g.label} are updated/unpacked.
-     * Some notes will be marked with the operation {@link Graph#MARKER}, these
-     * are dangling nodes that have no function anymore.
+     * Note: only {@code g.inc, g.out and g.label} are updated/unpacked. Some
+     * notes will be marked with the operation {@link Graph#MARKER}, these are
+     * dangling nodes that have no function anymore.
      * </p>
      *
      * @param g The graph in which to unpack
@@ -259,9 +290,9 @@ public class EquivalenceChecker {
 
     /**
      * Get the compact graph of g. The operations of g that are irrelevant as
-     * denoted by {@code nodeValue} are removed. The
-     * {@code inputNodes} structure is modified in-place to reflect the
-     * indices of the inputs in the new compact Graph.
+     * denoted by {@code nodeValue} are removed. The {@code inputNodes}
+     * structure is modified in-place to reflect the indices of the inputs in
+     * the new compact Graph.
      *
      * @param g The graph structure of the pattern.
      * @param nodeValue For each node in the graph, its value as given by
@@ -271,8 +302,8 @@ public class EquivalenceChecker {
      * compact graph. It is assumed that irrelevant inputs are already -1.
      * @return A compact graph resulting from modifying g to only hold relevant
      * operations (given by {@code nodeValue}) Only the {@code inc,
-     * out} and {@code label} structure of this graph is correct. The
-     * rest is not.
+     * out} and {@code label} structure of this graph is correct. The rest is
+     * not.
      */
     private Graph getCompactGraph(Graph g, byte[] nodeValue, int[] inputNodes) {
         // Start with 'going down' and fixing the inc
@@ -363,9 +394,9 @@ public class EquivalenceChecker {
      * @param input The inputs given to the {@link inputNodes},
      * {1,2,4,8,16} interpreted as {0,1,2,3,4}. 2 is used to represent an actual
      * value. 3 and 4 are used for irrelevant values.
-     * @param inputNodes The nodes in graph that take the given
-     * {@code input}. {@code inputNodes[x]} is the node (index in the
-     * graph) that takes input {@code input[x]}.
+     * @param inputNodes The nodes in graph that take the given {@code input}.
+     * {@code inputNodes[x]} is the node (index in the graph) that takes input
+     * {@code input[x]}.
      * @return The resulting values of each node. For each node in graph the
      * result informs of the value of the node {0,1,2,3,4} by {1,2,4,16,16}.
      * Nodes that apparently pass on the value (due to neutral elements), are
@@ -487,7 +518,7 @@ public class EquivalenceChecker {
     /**
      * Auxiliary method of {@link #propagateUp(dagfsm.Graph, byte[], int[])}.
      *
-     * This fixes  {@code nodeValue[currentNodeIndex]} to the correct value
+     * This fixes {@code nodeValue[currentNodeIndex]} to the correct value
      * (1,2,4,16) by looking at the values (nodeValue) of the children of that
      * node. Assumes the operation of the node is the sum operation.
      *
@@ -564,10 +595,10 @@ public class EquivalenceChecker {
      * {@code fromPass}. After this method the parents of this node will be
      * connected to {@code fromPass}.
      *
-     * @throws IllegalArgumentException When the result is that
-     * {@code fromPass} has two or more direct connections to the same
-     * node. This can not be handled by the Canonical Code algorithm and may
-     * also not be a logical thing to allow.
+     * @throws IllegalArgumentException When the result is that {@code fromPass}
+     * has two or more direct connections to the same node. This can not be
+     * handled by the Canonical Code algorithm and may also not be a logical
+     * thing to allow.
      */
     private void bridgeConnection(Graph g, int fromPass, int toPass) {
         //Parents of toPass now get result from fromPass
@@ -604,8 +635,8 @@ public class EquivalenceChecker {
      * Check whether each element in the array only occurrence once.
      *
      * @param arr The array to check
-     * @return True if every element in {@code arr} is only present once.
-     * False otherwise, when there is an element that occurs at least twice.
+     * @return True if every element in {@code arr} is only present once. False
+     * otherwise, when there is an element that occurs at least twice.
      */
     private boolean isDistinct(int[] arr) {
         int[] arrSorted = arr.clone();
