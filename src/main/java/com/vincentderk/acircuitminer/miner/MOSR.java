@@ -208,6 +208,10 @@ public class MOSR {
      * @throws IllegalArgumentException When a 'pair' in {@code patternString}
      * does not start with either {@code (}, {@code +}, {@code +o}, {@code *} or
      * {@code *o}.
+     * @throws IndexOutOfBoundsException When there is a wrong number of , or )
+     * in {@code patternString}.
+     * @throws NumberFormatException When the correct format (number,number) is
+     * not followed or the number is not parsable.
      */
     public static long[] stringToCode(String patternString) {
         LongArrayList pattern = new LongArrayList();
@@ -228,6 +232,7 @@ public class MOSR {
                 case '*':
                     if (index + 1 < patternString.length() && patternString.charAt(index + 1) == 'o') {
                         pattern.add(Long.MAX_VALUE - Graph.PRODUCT_OUTPUT);
+                        index++; //skip o
                     } else {
                         pattern.add(Long.MAX_VALUE - Graph.PRODUCT);
                     }
@@ -237,6 +242,7 @@ public class MOSR {
                 case '+':
                     if (index + 1 < patternString.length() && patternString.charAt(index + 1) == 'o') {
                         pattern.add(Long.MAX_VALUE - Graph.SUM_OUTPUT);
+                        index++; //skip o
                     } else {
                         pattern.add(Long.MAX_VALUE - Graph.SUM);
                     }
