@@ -1,6 +1,7 @@
 package com.vincentderk.acircuitminer.miner.util.comparators;
 
 import com.vincentderk.acircuitminer.miner.SOSR;
+import static com.vincentderk.acircuitminer.miner.SOSR.patternProfit;
 import com.vincentderk.acircuitminer.miner.StateSingleOutput;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,7 +11,8 @@ import java.util.Comparator;
  * Comparator to sort based on the amount of savings a pattern provides.
  * <br>The savings are calculated based on the energy saved by replacing one
  * occurrence of the pattern, multiplied by the amount of occurrences (value of
- * the entry object). This uses {@link SOSR#patternProfitState(long[], ObjectArrayList)}.
+ * the entry object). This uses
+ * {@link SOSR#patternProfitState(long[], ObjectArrayList)}.
  *
  * @author Vincent Derkinderen
  * @version 2.0
@@ -40,8 +42,29 @@ public class EntryProfitStateCom implements Comparator<Object2ObjectMap.Entry<lo
     @Override
     public int compare(Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> o1, Object2ObjectMap.Entry<long[], ObjectArrayList<StateSingleOutput>> o2) {
         //Compress profit (vertices-1 * occurence count)
-        double o1CompressProfit = SOSR.patternProfitState(o1.getKey(), o2.getValue());
-        double o2CompressProfit = SOSR.patternProfitState(o1.getKey(), o2.getValue());
+        double o1CompressProfit = patternProfitState(o1.getKey(), o2.getValue());
+        double o2CompressProfit = patternProfitState(o1.getKey(), o2.getValue());
         return (lowToHigh) ? Double.compare(o1CompressProfit, o2CompressProfit) : Double.compare(o2CompressProfit, o1CompressProfit);
+    }
+
+    /**
+     * Get the estimated profit the given pattern (code) gives, multiplied by
+     * the amount of occurrences.
+     *
+     * @param code The pattern to calculate the profit of.
+     * @param occurrences The replaceable occurrences of the given pattern.
+     * @return The estimated profit of a pattern. This is based on comparing the
+     * cost of evaluating the pattern as if only + and * were available hardware
+     * components versus the cost of evaluating the pattern as if it was
+     * available as one hardware component. The profit is multiplied by the
+     * amount of occurrences.
+     * @see SOSR#patternProfit(long[], int)
+     */
+    public static double patternProfitState(long[] code, ObjectArrayList<StateSingleOutput> occurrences) {
+        if (!occurrences.isEmpty()) {
+            return patternProfit(code, occurrences.size());
+        } else {
+            return 0;
+        }
     }
 }

@@ -86,6 +86,14 @@ public class EmulatableBlock {
      */
     public int activeInputCount;
 
+    /**
+     * Creates and returns a copy of this object. This is not a deep-clone so
+     * {@link #emulatedCode}, {@link #input}, {@link #options} and
+     * {@link #emulatedIndexToActualInputIndex} in this object are referencing
+     * the same arrays in the returned clone.
+     *
+     * @return A shallow copy of this object instance.
+     */
     @Override
     public EmulatableBlock clone() {
         EmulatableBlock block = new EmulatableBlock();

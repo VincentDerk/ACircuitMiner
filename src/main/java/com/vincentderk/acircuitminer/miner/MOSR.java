@@ -8,6 +8,7 @@ import static com.vincentderk.acircuitminer.miner.util.Utils.MULTIPLICATION_COST
 import static com.vincentderk.acircuitminer.miner.util.Utils.SUM_COST;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
 
@@ -48,6 +49,7 @@ public class MOSR {
      * Get the amount of internal edges in the given code.
      * <p>
      * An internal edge is an edge where both vertices are internal vertices.
+     * The given {@code code} must be sorted.
      *
      * @param code The code to check the internal edge count of.
      * @return The amount of internal edges in the given code.
@@ -190,6 +192,62 @@ public class MOSR {
             }
         }
         return count;
+    }
+
+    /**
+     * Converts the given pattern in {@code String} format into code
+     * ({@code long[]}) format.
+     * <br>{@code patternString} is expected to follow the convention of
+     * {@link SOSR}. e.g.
+     * {@code (0,1)(0,2)(0,3)*o(1,4)(1,5)+(2,4)(2,6)*o(3,7)(3,8)} Only
+     * {@code {+,+o,*,*o}} are allowed operations. Any deviation from this
+     * convention can result in a wrong return value or thrown exceptions.
+     *
+     * @param patternString
+     * @return The code of {@code patternString} in {@code long[]} format.
+     * @throws IllegalArgumentException When a 'pair' in {@code patternString}
+     * does not start with either {@code (}, {@code +}, {@code +o}, {@code *} or
+     * {@code *o}.
+     */
+    public static long[] stringToCode(String patternString) {
+        LongArrayList pattern = new LongArrayList();
+        int index = 0; //Index of current pair in patternString
+
+        while (index != patternString.length()) {
+            switch (patternString.charAt(index)) {
+                case '(':
+                    int nextCommaIndex = patternString.indexOf(',', index);
+                    int nextCloseBracketIndex = patternString.indexOf(')', index);
+                    int first = Integer.parseInt(patternString.substring(index + 1, nextCommaIndex));
+                    int second = Integer.parseInt(patternString.substring(nextCommaIndex + 1, nextCloseBracketIndex));
+                    long value = ((long) first << 32) | second;
+                    pattern.add(value);
+                    index = nextCloseBracketIndex + 1;
+                    break;
+
+                case '*':
+                    if (index + 1 < patternString.length() && patternString.charAt(index + 1) == 'o') {
+                        pattern.add(Long.MAX_VALUE - Graph.PRODUCT_OUTPUT);
+                    } else {
+                        pattern.add(Long.MAX_VALUE - Graph.PRODUCT);
+                    }
+                    index++;
+                    break;
+
+                case '+':
+                    if (index + 1 < patternString.length() && patternString.charAt(index + 1) == 'o') {
+                        pattern.add(Long.MAX_VALUE - Graph.SUM_OUTPUT);
+                    } else {
+                        pattern.add(Long.MAX_VALUE - Graph.SUM);
+                    }
+                    index++;
+                    break;
+
+                default:
+                    throw new IllegalArgumentException("Unexpected char: " + patternString.charAt(index) + " in SOSR.StringToCode(" + patternString + ")");
+            }
+        }
+        return pattern.toLongArray();
     }
 
     /**
@@ -373,27 +431,6 @@ public class MOSR {
      * @see #patternProfit(long[], int)
      */
     public static double patternProfit(long[] code, ObjectArrayList<int[]> occurrences) {
-        if (!occurrences.isEmpty()) {
-            return patternProfit(code, occurrences.size());
-        } else {
-            return 0;
-        }
-    }
-
-    /**
-     * Get the estimated profit the given pattern (code) gives, multiplied by
-     * the amount of occurrences.
-     *
-     * @param code The pattern to calculate the profit of.
-     * @param occurrences The replaceable occurrences of the given pattern.
-     * @return The estimated profit of a pattern. This is based on comparing the
-     * cost of evaluating the pattern as if only + and * were available hardware
-     * components versus the cost of evaluating the pattern as if it was
-     * available as one hardware component. The profit is multiplied by the
-     * amount of occurrences.
-     * @see #patternProfit(long[], int)
-     */
-    public static double patternProfitState(long[] code, ObjectArrayList<StateMultiOutput> occurrences) {
         if (!occurrences.isEmpty()) {
             return patternProfit(code, occurrences.size());
         } else {
