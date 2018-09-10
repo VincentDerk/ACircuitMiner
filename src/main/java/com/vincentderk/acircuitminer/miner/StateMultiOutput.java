@@ -108,10 +108,10 @@ public class StateMultiOutput extends StateExpandable implements Cloneable {
         int[] n_outputNodes = outputNodes;
 
         //if node has a parent not present in vertices, add as output
-        int outputIndex = Arrays.binarySearch(outputNodes, expandNode);
+        int outputIndex = (Arrays.binarySearch(outputNodes, expandNode) + 1) * -1;
         for (int parent : g.out[expandNode]) {
             if (Arrays.binarySearch(vertices, parent) < 0) {
-                //add output to outputs als hij er ng niet is
+                //add expandNode to outputs if parent not yet in vertices
                 n_outputNodes = new int[outputNodes.length + 1];
                 System.arraycopy(outputNodes, 0, n_outputNodes, 0, outputIndex);
                 n_outputNodes[outputIndex] = expandNode;
@@ -123,13 +123,11 @@ public class StateMultiOutput extends StateExpandable implements Cloneable {
         //If child of new node was output. Maybe not anymore.
         for (int child : g.inc[expandNode]) {
             int childIndex = Arrays.binarySearch(outputNodes, child);
-            if (childIndex >= 0 && g.out[child].length > 1) {
-                if (allPresent(g.out[child])) {
-                    //all parents of child present, remove child from outputs
-                    int[] n_outputNodes_t = Arrays.copyOf(n_outputNodes, n_outputNodes.length - 1);
-                    System.arraycopy(n_outputNodes, childIndex + 1, n_outputNodes_t, childIndex, n_outputNodes.length - childIndex - 1);
-                    n_outputNodes = n_outputNodes_t;
-                }
+            if (childIndex >= 0 && (g.out[child].length == 1 || allPresent(g.out[child], expandNode))) {
+                //remove child from outputs if all its parents (except expandNode) are now present in vertices.
+                int[] n_outputNodes_t = Arrays.copyOf(n_outputNodes, n_outputNodes.length - 1);
+                System.arraycopy(n_outputNodes, childIndex + 1, n_outputNodes_t, childIndex, n_outputNodes.length - childIndex - 1);
+                n_outputNodes = n_outputNodes_t;
             }
         }
 
@@ -137,15 +135,19 @@ public class StateMultiOutput extends StateExpandable implements Cloneable {
     }
 
     /**
-     * Whether all the given nodes are present in vertices.
+     * Whether all the given {@code nodes} are present in {@link vertices}. The
+     * exception is the node: {@code exceptionNode}. This node is ignored during
+     * the check.
      *
      * @param nodes The nodes to check. Must not be null.
+     * @param exceptionNode The node that is not checked, regardless of whether
+     * it is included in {@code nodes}.
      * @return False when there is a node in nodes that is not present in
-     * vertices. True otherwise.
+     * vertices (and is not equal to {@code exceptionNode}. True otherwise.
      */
-    private boolean allPresent(int[] nodes) {
+    private boolean allPresent(int[] nodes, int exceptionNode) {
         for (int node : nodes) {
-            if (Arrays.binarySearch(vertices, node) < 0) {
+            if (Arrays.binarySearch(vertices, node) < 0 && node != exceptionNode) {
                 return false;
             }
         }
