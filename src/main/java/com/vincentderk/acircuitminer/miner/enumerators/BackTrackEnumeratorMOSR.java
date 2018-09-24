@@ -19,58 +19,15 @@ import java.util.concurrent.TimeUnit;
 
 //TODO: Update doc to MOSR.
 /**
- * An enumerator that finds {@link StateSingleOutput} occurrences with only one
- * root and a maximum amount of inputs + outputs. (<b>Enumeration,
- * {@link #enumerate(com.vincentderk.acircuitminer.miner.Graph, int, int) enumerate}</b>)
- * It does this by finding all occurrences that have a certain node as root.
- * This is then repeated for each node in the given graph. (<b>Expansion,
- * {@link StateSingleOutput#expand(Graph, int) expand}</b>) When expanding an
- * occurrence into a bigger occurrence, we only need to consider the children.
- * This is due to the fact that we only search for induced, connected subgraphs.
+ * The same as {@link BackTrackEnumerator} but now finding occurrences with
+ * Multiple Output but still a Single Root (MOSR). Compared to the occurrences
+ * found in {@link BackTrackEnumerator}, some nodes of those found
+ * occurrences can now have an additional externally-outgoing edge that provides
+ * another output.
  *
  * <p>
- * The expanding of an occurrence into another occurrence is done by a
- * depth-first approach. At each point, it keeps track of which node it
- * expanded. When later a backtrack occurs, another index (node) is expanded
- * instead. To prevent finding the same occurrence twice (by expanding in a
- * different order), the {@link StateExpandable} object stores a list of
- * {@link StateExpandable#unexpandable unexpandable nodes} that should not be
- * expanded anymore in the current decision path. This is based on the work of
- * "Automatic enumeration of all connected subgraphs" by Rücker et al.
- *
- * <p>
- * <b>Incomplete enumeration: heuristic deepening</b>
- * This class also provides
- * {@link #enumerate(Graph, int[], boolean, int, int) a method} that, after the
- * complete search, continues the search in a heuristic manner to also find some
- * occurrences of larger patterns. First, the complete search is executed. That
- * is the first iteration. While doing this, it also keeps track of the states
- * that it can further expand in the next iteration. This is an incomplete
- * search as it does not consider all states found so far.
- *
- * <p>
- * The expandable states that are tracked are those that were occurrences of
- * valid patterns (satisfied input and output restrictions) but reached the
- * maximum amount of internal nodes. This is incomplete since there might be
- * occurrences that only temporarily not satisfy a restriction.
- *
- * <p>
- * <b>Occurrences found: induced, connected subgraphs with one root and a
- * maximum of k nodes.</b>
- *
- * <p>
- * <b>Restrictions:</b>
- * <ul>
- * <li>No node has more than one connection to another node.</li>
- * <li>The labels (operations) of the used {@link Graph graphs} are restricted
- * to {@link Graph#SUM},{@link Graph#PRODUCT} and {@link Graph#INPUT}.</li>
- * <li>k (maximum pattern/occurrence size) has a highest possible value defined
- * by {@code (k,k-1) <} {@link Long#MAX_VALUE} - {@link Graph#HIGHEST_OP} where
- * (k,k-1) represents a Long value with the highest 32 bits as k and the lowest
- * 32 bits as k-1.</li>
- * <li>For each found occurrence:
- * {@code nb_of_edges + nb_of_nodes <} {@link Integer#MAX_VALUE}.</li>
- * </ul>
+ * <b>Beware, these occurrences may not all be valid in that an output can be
+ * (indirectly) required as an input of the occurrence (component) itself.</b>
  *
  * @author Vincent Derkinderen
  * @version 2.0

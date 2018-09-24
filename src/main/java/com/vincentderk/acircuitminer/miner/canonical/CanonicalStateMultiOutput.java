@@ -64,7 +64,7 @@ public class CanonicalStateMultiOutput implements Comparable<CanonicalStateMulti
             this.revAllocation.put(outputNodes[i], i);
         }
         this.extensions = outputNodes.clone();
-        this.n = extensions.length;
+        this.n = outputNodes.length;
         this.inputCount = 0;
     }
 
