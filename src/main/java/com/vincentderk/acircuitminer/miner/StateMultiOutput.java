@@ -38,7 +38,7 @@ public class StateMultiOutput extends StateExpandable implements Cloneable {
      *
      * @param g The graph structure
      * @param expandIndex The node that will be used for expanding this state is
-     * the node in this state's expandable array on index expandIndex. Thus,
+     * the node in this state's expandable array on index expandIndex, {@code expandable[expandIndex]}. Thus,
      * expandIndex must be between the boundaries of the expandable array.
      *
      * @return The state resulting from expanding this state with the given
@@ -115,7 +115,7 @@ public class StateMultiOutput extends StateExpandable implements Cloneable {
                 n_outputNodes = new int[outputNodes.length + 1];
                 System.arraycopy(outputNodes, 0, n_outputNodes, 0, outputIndex);
                 n_outputNodes[outputIndex] = expandNode;
-                System.arraycopy(outputNodes, outputIndex, n_outputNodes, outputIndex + 1, outputNodes.length - outputIndex - 1);
+                System.arraycopy(outputNodes, outputIndex, n_outputNodes, outputIndex + 1, outputNodes.length - outputIndex);
                 break;
             }
         }
