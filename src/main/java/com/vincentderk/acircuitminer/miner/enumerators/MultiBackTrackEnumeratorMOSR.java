@@ -306,7 +306,7 @@ public class MultiBackTrackEnumeratorMOSR implements ExpandableEnumerator {
 
     @Override
     public String toString() {
-        return "MultiBackTrackEnumerator";
+        return "MultiBackTrackEnumeratorMOSR";
     }
 
     // --------------------------------------------------------------------------
@@ -536,10 +536,10 @@ public class MultiBackTrackEnumeratorMOSR implements ExpandableEnumerator {
                                 && expanded.outputNodes.length + expanded.expandable.length + expanded.unexpandable.length <= maxPorts) { //Count #Inputs (excl literals)
                             /* Pattern occurrence count */
                             codeOcc = expanded.getCodeOcc(g);
-                            if (codeOcc.inputCount + expanded.vertices.length <= maxPorts) { //Count #Inputs (incl literals) + #outputs
+                            if (codeOcc.inputCount + expanded.outputNodes.length <= maxPorts) { //Count #Inputs (incl literals) + #outputs
                                 ObjectArrayList<int[]> singleObj = new ObjectArrayList<>();
                                 singleObj.add(codeOcc.lastVerticesOrdered); //vertices of expanded sorted in assigned order.
-                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> MultiBackTrackEnumeratorMOSR.mergeAddFirst(v1, v2));
+                                patterns.merge(codeOcc.code, singleObj, (v1, v2) -> mergeAddFirst(v1, v2));
                             }
                         }
 
